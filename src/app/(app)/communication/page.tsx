@@ -1,5 +1,8 @@
+import Link from "next/link";
+
 import { AppHeader } from "@/components/header";
-import React from "react";
+import { EmptyState } from "@/components/state";
+import { Button } from "@/components/ui/button";
 
 export default function CommunicationPage() {
   return (
@@ -7,8 +10,15 @@ export default function CommunicationPage() {
       <AppHeader
         breadcrumb={[{ label: "Communication", href: "/communication" }]}
       />
-      <main className="flex flex-1 flex-col overflow-y-auto p-4">
-        <h1 className="text-2xl font-bold">Communication</h1>
+      <main className="flex flex-1 items-center justify-center p-4">
+        <EmptyState
+          title="Communication"
+          description="We're building this page. Please check back soon!"
+        >
+          <Button variant="outline" asChild>
+            <Link href="/candidates">Move to Candidates</Link>
+          </Button>
+        </EmptyState>
       </main>
     </>
   );

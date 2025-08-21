@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import Fonts from "@/assets/fonts";
+import Fonts from "@/assets/font";
 import Providers from "@/providers";
 import "@/styles/globals.css";
 
