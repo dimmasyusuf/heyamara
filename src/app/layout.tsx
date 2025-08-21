@@ -1,13 +1,9 @@
-import type { Metadata } from "next";
-import Fonts from "@/assets/fonts";
+import Fonts from "@/assets/font";
+import { getSEOTags } from "@/lib/seo";
 import Providers from "@/providers";
 import "@/styles/globals.css";
 
-export const metadata: Metadata = {
-  title: "Amara",
-  description:
-    "Amara streamlines the hiring process for HR teams, making it easy to find, evaluate, and recruit top talent.",
-};
+export const metadata = getSEOTags();
 
 export default function RootLayout({
   children,
