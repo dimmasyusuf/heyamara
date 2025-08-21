@@ -19,11 +19,13 @@ import {
 import { IconSearch } from "@tabler/icons-react";
 import { cn } from "@/lib/utils";
 import { menu } from "./menu";
+import { useRouter } from "next/navigation";
 
 export default function SearchSidebar() {
   const [isOpen, setIsOpen] = React.useState(false);
   const [searchValue, setSearchValue] = React.useState("");
 
+  const router = useRouter();
   const { open } = useSidebar();
 
   React.useEffect(() => {
@@ -38,17 +40,20 @@ export default function SearchSidebar() {
     return () => document.removeEventListener("keydown", down);
   }, []);
 
-  // Filter menu items based on search value
   const filteredMenu = React.useMemo(() => {
     if (!searchValue.trim()) {
-      // Show only first 3 items when no search
       return menu.slice(0, 3);
     }
-    // Show all items that match the search
+
     return menu.filter((item) =>
       item.title.toLowerCase().includes(searchValue.toLowerCase()),
     );
   }, [searchValue]);
+
+  const handleSelect = (href: string) => {
+    router.push(href);
+    setIsOpen(false);
+  };
 
   return (
     <>
@@ -82,7 +87,10 @@ export default function SearchSidebar() {
             heading={searchValue.trim() ? "Search Results" : "Suggestions"}
           >
             {filteredMenu.map((item) => (
-              <CommandItem key={item.title}>
+              <CommandItem
+                key={item.title}
+                onSelect={() => handleSelect(item.href)}
+              >
                 <item.icon />
                 <span>{item.title}</span>
               </CommandItem>

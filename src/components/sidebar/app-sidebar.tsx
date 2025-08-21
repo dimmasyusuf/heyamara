@@ -61,7 +61,7 @@ export default function AppSidebar() {
                   )}
                 >
                   <SidebarMenuButton tooltip={item.title} asChild>
-                    <Link href={item.url}>
+                    <Link href={item.href}>
                       {item.icon && <item.icon />}
                       <span>{item.title}</span>
                     </Link>

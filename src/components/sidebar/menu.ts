@@ -10,51 +10,51 @@ import {
 } from "@tabler/icons-react";
 
 export interface MenuItem {
-  title: string;
-  url: string;
   icon: React.ElementType;
+  title: string;
+  href: string;
 }
 
 export const menu: MenuItem[] = [
   {
-    title: "Dashboard",
-    url: "/",
     icon: IconDashboard,
+    title: "Dashboard",
+    href: "/",
   },
   {
-    title: "Candidates",
-    url: "/candidates",
     icon: IconUsers,
+    title: "Candidates",
+    href: "/candidates",
   },
   {
-    title: "Clients",
-    url: "/clients",
     icon: IconBriefcase,
+    title: "Clients",
+    href: "/clients",
   },
   {
-    title: "Prospects",
-    url: "/prospects",
     icon: IconDatabase,
+    title: "Prospects",
+    href: "/prospects",
   },
   {
-    title: "Calendar",
-    url: "/calendar",
     icon: IconCalendar,
+    title: "Calendar",
+    href: "/calendar",
   },
   {
-    title: "Communication",
-    url: "/communication",
     icon: IconMessage,
+    title: "Communication",
+    href: "/communication",
   },
   {
-    title: "Settings",
-    url: "/settings",
     icon: IconSettings,
+    title: "Settings",
+    href: "/settings",
   },
 
   {
-    title: "Trash",
-    url: "/trash",
     icon: IconTrash,
+    title: "Trash",
+    href: "/trash",
   },
 ];
