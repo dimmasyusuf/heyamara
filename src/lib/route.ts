@@ -1,1 +1,3 @@
-export const AUTH_ROUTES = ["/sign-in", "/sign-up"];
+export const ROUTES = {
+  AUTH: ["/auth", "/verify"],
+};

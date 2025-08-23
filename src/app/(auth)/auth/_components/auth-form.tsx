@@ -1,12 +1,17 @@
 "use client";
 
-import { GalleryVerticalEnd } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import Image from "next/image";
+import Link from "next/link";
+
+import { signIn } from "next-auth/react";
 import { FcGoogle } from "react-icons/fc";
 import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { zodResolver } from "@hookform/resolvers/zod";
+
+import Logo from "@/assets/brand/logo.svg";
+
+import { Button } from "@/components/ui/button";
 import {
   Form,
   FormControl,
@@ -15,9 +20,7 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import Image from "next/image";
-import Logo from "@/assets/brand/logo.svg";
-import Link from "next/link";
+import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 
 const formSchema = z.object({
@@ -33,6 +36,10 @@ export default function AuthForm() {
       email: "",
     },
   });
+
+  const handleGoogle = async () => {
+    await signIn("google");
+  };
 
   const onSubmit = (values: z.infer<typeof formSchema>) => {
     console.log(values);
@@ -84,7 +91,12 @@ export default function AuthForm() {
           </span>
         </div>
 
-        <Button type="button" variant="outline" className="h-12 w-full">
+        <Button
+          type="button"
+          variant="outline"
+          className="h-12 w-full"
+          onClick={handleGoogle}
+        >
           <FcGoogle className="size-4" />
           Continue with Google
         </Button>

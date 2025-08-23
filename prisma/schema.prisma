@@ -12,32 +12,32 @@ model User {
     id            String          @id @default(cuid())
     name          String?
     email         String          @unique
-    emailVerified DateTime?       @map("email_verified")
+    emailVerified DateTime?
     image         String?
     accounts      Account[]
     sessions      Session[]
     // Optional for WebAuthn support
     Authenticator Authenticator[]
 
-    createdAt DateTime @default(now()) @map("created_at")
-    updatedAt DateTime @updatedAt @map("updated_at")
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
 }
 
 model Account {
-    userId            String  @map("user_id")
+    userId            String
     type              String
     provider          String
-    providerAccountId String  @map("provider_account_id")
-    refreshToken      String? @map("refresh_token")
-    accessToken       String? @map("access_token")
-    expiresAt         Int?    @map("expires_at")
-    tokenType         String? @map("token_type")
+    providerAccountId String
+    refresh_token     String?
+    access_token      String?
+    expires_at        Int?
+    token_type        String?
     scope             String?
-    idToken           String? @map("id_token")
-    sessionState      String? @map("session_state")
+    id_token          String?
+    session_state     String?
 
-    createdAt DateTime @default(now()) @map("created_at")
-    updatedAt DateTime @updatedAt @map("updated_at")
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
 
     user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -45,13 +45,13 @@ model Account {
 }
 
 model Session {
-    sessionToken String   @unique @map("session_token")
-    userId       String   @map("user_id")
+    sessionToken String   @unique
+    userId       String
     expires      DateTime
     user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-    createdAt DateTime @default(now()) @map("created_at")
-    updatedAt DateTime @updatedAt @map("updated_at")
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
 }
 
 model VerificationToken {
@@ -64,13 +64,13 @@ model VerificationToken {
 
 // Optional for WebAuthn support
 model Authenticator {
-    credentialID         String  @unique @map("credential_id")
-    userId               String  @map("user_id")
-    providerAccountId    String  @map("provider_account_id")
-    credentialPublicKey  String  @map("credential_public_key")
+    credentialID         String  @unique
+    userId               String
+    providerAccountId    String
+    credentialPublicKey  String
     counter              Int
-    credentialDeviceType String  @map("credential_device_type")
-    credentialBackedUp   Boolean @map("credential_backed_up")
+    credentialDeviceType String
+    credentialBackedUp   Boolean
     transports           String?
 
     user User @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -88,32 +88,27 @@ model Candidate {
     notes       String?
     status      CandidateStatus
     rating      Int
-
-    createdAt DateTime @default(now()) @map("created_at")
-    updatedAt DateTime @updatedAt @map("updated_at")
-
-    resumes Resume[]
+    createdAt   DateTime        @default(now()) @map("created_at")
+    updatedAt   DateTime        @updatedAt @map("updated_at")
+    resumes     Resume[]
 }
 
 model Resume {
-    id          String @id @default(cuid())
-    candidateId String @map("candidate_id")
-    fileName    String @map("file_name")
-    filePath    String @map("file_path") // Path/key in the bucket
-    bucketName  String @map("bucket_name") // Supabase bucket name
-    fileSize    Int    @map("file_size") // File size in bytes
-    mimeType    String @map("mime_type") // File MIME type
-    url         String @map("url") // Public URL (can be generated from bucket + path)
-
-    createdAt DateTime @default(now()) @map("created_at")
-    updatedAt DateTime @updatedAt @map("updated_at")
-
-    candidate Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+    id          String    @id @default(cuid())
+    candidateId String    @map("candidate_id")
+    fileName    String    @map("file_name")
+    filePath    String    @map("file_path")
+    bucketName  String    @map("bucket_name")
+    fileSize    Int       @map("file_size")
+    mimeType    String    @map("mime_type")
+    url         String    @map("url")
+    createdAt   DateTime  @default(now()) @map("created_at")
+    updatedAt   DateTime  @updatedAt @map("updated_at")
+    candidate   Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
 }
 
-/**
- * ENUMS
- */
+/// *
+/// * ENUMS
 enum CandidateStatus {
     ACTIVE
     INTERVIEWING
