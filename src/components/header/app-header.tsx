@@ -12,6 +12,8 @@ import React from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { IconBell, IconMessage } from "@tabler/icons-react";
+import UserPopover from "./user-popover";
+import Link from "next/link";
 
 interface AppHeaderProps {
   breadcrumb?: {
@@ -56,8 +58,11 @@ export default function AppHeader({ breadcrumb }: AppHeaderProps) {
             size="icon"
             variant="ghost"
             className="h-8 w-8 [&_svg]:size-5"
+            asChild
           >
-            <IconMessage />
+            <Link href="/communication">
+              <IconMessage />
+            </Link>
           </Button>
 
           <Button
@@ -69,10 +74,7 @@ export default function AppHeader({ breadcrumb }: AppHeaderProps) {
             <IconBell />
           </Button>
 
-          <Avatar className="h-8 w-8">
-            <AvatarImage src="https://github.com/shadcn.png" />
-            <AvatarFallback>CN</AvatarFallback>
-          </Avatar>
+          <UserPopover />
         </div>
       </div>
     </header>
