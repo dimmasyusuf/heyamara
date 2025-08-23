@@ -25,7 +25,7 @@ import { Separator } from "@/components/ui/separator";
 
 const formSchema = z.object({
   email: z.string().email({
-    message: "Invalid email address.",
+    message: "Please enter a valid email address.",
   }),
 });
 
@@ -49,7 +49,7 @@ export default function AuthForm() {
   return (
     <div className="flex w-full max-w-sm flex-col gap-9">
       <Link href="/" className="m-auto flex w-fit items-center justify-center">
-        <Image src={Logo} alt="Acme Inc." width={56} height={56} />
+        <Image src={Logo} alt="Hey Amara" width={56} height={56} />
       </Link>
 
       <div className="flex flex-col items-center gap-4">
