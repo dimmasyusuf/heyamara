@@ -1,6 +1,24 @@
-import { AppHeader } from "@/components/header";
+"use client";
 
-export default async function CreateCandidatePage() {
+import { useEffect } from "react";
+
+import { AppHeader } from "@/components/header";
+import { useSidebar } from "@/components/ui/sidebar";
+import {
+  ResizableHandle,
+  ResizablePanel,
+  ResizablePanelGroup,
+} from "@/components/ui/resizable";
+import { EmptyState } from "@/components/state";
+import CVPreview from "./_components/cv-preview";
+
+export default function CreateCandidatePage() {
+  const { setOpen } = useSidebar();
+
+  useEffect(() => {
+    setOpen(false);
+  }, []);
+
   return (
     <>
       <AppHeader
@@ -9,7 +27,20 @@ export default async function CreateCandidatePage() {
           { label: "Create", href: "/candidates/create" },
         ]}
       />
-      <main className="flex flex-1 flex-col overflow-y-auto p-6"></main>
+      <main className="flex flex-1 flex-col overflow-y-auto">
+        <ResizablePanelGroup direction="horizontal">
+          <ResizablePanel>
+            <CVPreview />
+          </ResizablePanel>
+          <ResizableHandle withHandle />
+          <ResizablePanel>
+            <EmptyState
+              title="No CV uploaded"
+              description="Upload a CV to get started"
+            />
+          </ResizablePanel>
+        </ResizablePanelGroup>
+      </main>
     </>
   );
 }
