@@ -9,5 +9,10 @@ const prisma = new PrismaClient();
 export const { handlers, auth, signIn, signOut } = NextAuth({
   adapter: PrismaAdapter(prisma),
   session: { strategy: "jwt" },
+  debug: process.env.NODE_ENV === "development",
+  pages: {
+    signIn: "/auth",
+    verifyRequest: "/verify",
+  },
   ...authConfig,
 });

@@ -37,12 +37,13 @@ export default function AuthForm() {
     },
   });
 
-  const handleGoogle = async () => {
-    await signIn("google");
+  const handleGoogle = () => {
+    signIn("google");
   };
 
   const onSubmit = (values: z.infer<typeof formSchema>) => {
-    console.log(values);
+    sessionStorage.setItem("email", values.email);
+    signIn("resend", values);
   };
 
   return (
@@ -53,10 +54,10 @@ export default function AuthForm() {
 
       <div className="flex flex-col items-center gap-4">
         <h1 className="text-3xl">Log in or sign up</h1>
-        <div className="text-center text-sm">
+        <p className="text-center text-sm">
           You&apos;ll streamline hiring, save time, and get more done with
           AI-powered tools.
-        </div>
+        </p>
       </div>
 
       <div className="flex flex-col gap-6">
