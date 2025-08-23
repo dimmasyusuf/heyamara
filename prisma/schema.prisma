@@ -1,0 +1,136 @@
+generator client {
+    provider = "prisma-client-js"
+}
+
+datasource db {
+    provider  = "postgresql"
+    url       = env("DATABASE_URL")
+    directUrl = env("DIRECT_URL")
+}
+
+model User {
+    id            String          @id @default(cuid())
+    name          String?
+    email         String          @unique
+    emailVerified DateTime?       @map("email_verified")
+    image         String?
+    accounts      Account[]
+    sessions      Session[]
+    // Optional for WebAuthn support
+    Authenticator Authenticator[]
+
+    createdAt DateTime @default(now()) @map("created_at")
+    updatedAt DateTime @updatedAt @map("updated_at")
+}
+
+model Account {
+    userId            String  @map("user_id")
+    type              String
+    provider          String
+    providerAccountId String  @map("provider_account_id")
+    refreshToken      String? @map("refresh_token")
+    accessToken       String? @map("access_token")
+    expiresAt         Int?    @map("expires_at")
+    tokenType         String? @map("token_type")
+    scope             String?
+    idToken           String? @map("id_token")
+    sessionState      String? @map("session_state")
+
+    createdAt DateTime @default(now()) @map("created_at")
+    updatedAt DateTime @updatedAt @map("updated_at")
+
+    user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+    @@id([provider, providerAccountId])
+}
+
+model Session {
+    sessionToken String   @unique @map("session_token")
+    userId       String   @map("user_id")
+    expires      DateTime
+    user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+    createdAt DateTime @default(now()) @map("created_at")
+    updatedAt DateTime @updatedAt @map("updated_at")
+}
+
+model VerificationToken {
+    identifier String
+    token      String
+    expires    DateTime
+
+    @@id([identifier, token])
+}
+
+// Optional for WebAuthn support
+model Authenticator {
+    credentialID         String  @unique @map("credential_id")
+    userId               String  @map("user_id")
+    providerAccountId    String  @map("provider_account_id")
+    credentialPublicKey  String  @map("credential_public_key")
+    counter              Int
+    credentialDeviceType String  @map("credential_device_type")
+    credentialBackedUp   Boolean @map("credential_backed_up")
+    transports           String?
+
+    user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+    @@id([userId, credentialID])
+}
+
+model Candidate {
+    id          String          @id @default(cuid())
+    name        String
+    jobTitle    String?         @map("job_title")
+    jobLocation String?         @map("job_location")
+    payRate     Int             @map("pay_rate")
+    payType     PayType         @map("pay_type")
+    notes       String?
+    status      CandidateStatus
+    rating      Int
+
+    createdAt DateTime @default(now()) @map("created_at")
+    updatedAt DateTime @updatedAt @map("updated_at")
+
+    resumes Resume[]
+}
+
+model Resume {
+    id          String @id @default(cuid())
+    candidateId String @map("candidate_id")
+    fileName    String @map("file_name")
+    filePath    String @map("file_path") // Path/key in the bucket
+    bucketName  String @map("bucket_name") // Supabase bucket name
+    fileSize    Int    @map("file_size") // File size in bytes
+    mimeType    String @map("mime_type") // File MIME type
+    url         String @map("url") // Public URL (can be generated from bucket + path)
+
+    createdAt DateTime @default(now()) @map("created_at")
+    updatedAt DateTime @updatedAt @map("updated_at")
+
+    candidate Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+}
+
+/**
+ * ENUMS
+ */
+enum CandidateStatus {
+    ACTIVE
+    INTERVIEWING
+    NOT_INTERESTED
+    SUBMITTED
+    FOLLOW_UP
+    INTERESTED
+    LVM
+    PLACED
+    OFFER
+    SCREENING
+}
+
+enum PayType {
+    HOURLY
+    DAILY
+    WEEKLY
+    MONTHLY
+    YEARLY
+}

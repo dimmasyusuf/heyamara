@@ -17,6 +17,8 @@
   },
   "dependencies": {
     "@ai-sdk/react": "^2.0.22",
+    "@auth/prisma-adapter": "^2.10.0",
+    "@prisma/client": "^6.14.0",
     "@radix-ui/react-avatar": "^1.1.10",
     "@radix-ui/react-collapsible": "^1.1.12",
     "@radix-ui/react-dialog": "^1.1.15",
@@ -41,6 +43,7 @@
     "lucide-react": "^0.540.0",
     "nanoid": "^5.1.5",
     "next": "14.2.32",
+    "next-auth": "^5.0.0-beta.29",
     "react": "^18",
     "react-dom": "^18",
     "react-dropzone": "^14.3.8",
@@ -57,7 +60,7 @@
     "@commitlint/cli": "^19.8.1",
     "@commitlint/config-conventional": "^19.8.1",
     "@tanstack/eslint-plugin-query": "^5.83.1",
-    "@types/node": "^20",
+    "@types/node": "^20.19.11",
     "@types/react": "^18",
     "@types/react-dom": "^18",
     "@types/react-syntax-highlighter": "^15.5.13",
@@ -68,8 +71,10 @@
     "postcss": "^8",
     "prettier": "^3.6.2",
     "prettier-plugin-tailwindcss": "^0.6.14",
+    "prisma": "^6.14.0",
     "standard-version": "^9.5.0",
     "tailwindcss": "^3.4.1",
-    "typescript": "^5"
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.2"
   }
 }
