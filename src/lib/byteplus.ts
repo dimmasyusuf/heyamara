@@ -1,12 +1,4 @@
-interface BytePlusProps {
-  model: string;
-  messages: { role: "system" | "user"; content: string }[];
-}
-
-interface BytePlusConfig {
-  apiUrl: string;
-  apiKey: string;
-}
+import { BytePlusConfig, BytePlusProps, BytePlusChat } from "@/types/byteplus";
 
 export default class BytePlus {
   private config: BytePlusConfig;
@@ -25,7 +17,10 @@ export default class BytePlus {
     };
   }
 
-  async chat({ model, messages }: BytePlusProps) {
+  async chat({
+    model = "seed-1-6-250615",
+    messages,
+  }: BytePlusProps): Promise<BytePlusChat> {
     const options = {
       method: "POST",
       headers: {
@@ -41,13 +36,17 @@ export default class BytePlus {
     try {
       const response = await fetch(this.config.apiUrl, options);
       const data = await response.json();
-      console.log(data);
+      console.log("BytePlus response:", data);
+
+      // Return the response data so it can be used
+      return data;
     } catch (error) {
-      console.error(error);
+      console.error("BytePlus error:", error);
+      throw error;
     }
   }
 
-  async stream({ model, messages }: BytePlusProps) {
+  async stream({ model = "seed-1-6-250615", messages }: BytePlusProps) {
     const options = {
       method: "POST",
       headers: {

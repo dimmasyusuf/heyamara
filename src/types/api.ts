@@ -1,15 +1,11 @@
-export interface BaseResponse {
+export interface Response<T = any> {
   status: number;
   message: string;
-}
-
-export interface Pagination {
-  page: number;
-  per_page: number;
-  total: number;
-  total_pages: number;
-}
-
-export interface PaginationResponse {
-  pagination: Pagination;
+  data?: T;
+  pagination?: {
+    page: number;
+    per_page: number;
+    total: number;
+    total_pages: number;
+  };
 }

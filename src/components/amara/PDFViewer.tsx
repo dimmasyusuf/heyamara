@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { FileText, AlertCircle, Loader2 } from "lucide-react";
+import { FileText, AlertCircle, Loader2, Download } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface PDFViewerProps {
@@ -27,6 +27,9 @@ export const PDFViewer: React.FC<PDFViewerProps> = ({
     setIsLoading(false);
     setHasError(true);
   };
+
+  // Check if the src is a blob URL
+  const isBlobUrl = src.startsWith("blob:");
 
   if (hasError) {
     return (
@@ -58,6 +61,39 @@ export const PDFViewer: React.FC<PDFViewerProps> = ({
     );
   }
 
+  // For blob URLs, use object tag instead of iframe
+  if (isBlobUrl) {
+    return (
+      <div className="flex h-full flex-1">
+        <object
+          data={src}
+          type="application/pdf"
+          className="h-full w-full"
+          onLoad={handleLoad}
+          onError={handleError}
+        >
+          <div className="flex h-full items-center justify-center p-8 text-center">
+            <div className="flex flex-col items-center gap-3">
+              <FileText className="h-12 w-12 text-muted-foreground" />
+              <p className="text-sm text-muted-foreground">
+                Your browser doesn't support PDF preview.
+              </p>
+              <a
+                href={src}
+                download={title || "document.pdf"}
+                className="inline-flex items-center gap-2 rounded-md bg-primary px-4 py-2 text-primary-foreground transition-colors hover:bg-primary/90"
+              >
+                <Download className="h-4 w-4" />
+                Download PDF
+              </a>
+            </div>
+          </div>
+        </object>
+      </div>
+    );
+  }
+
+  // For regular URLs, use iframe as before
   return (
     <div className={cn("relative h-full w-full", className)}>
       {isLoading && (
