@@ -22,7 +22,7 @@ export default function ResumePreview({ candidate }: ResumePreviewProps) {
       .getPublicUrl(candidate.resume.path);
 
     return (
-      <div className="flex h-full w-full p-6">
+      <div className="flex h-full w-full">
         <AmaraIframe src={data.publicUrl} title={candidate.resume.fileName} />
       </div>
     );

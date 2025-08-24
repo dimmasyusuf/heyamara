@@ -7,6 +7,7 @@ import { Response } from "@/components/ai-elements/response";
 import { toast } from "sonner";
 import { useParams } from "next/navigation";
 import { GetCandidateResponse } from "@/types/candidate";
+import { TiptapEditor } from "@/components/tiptap/templates/simple";
 
 interface ResumeEditorProps {
   candidate?: GetCandidateResponse["data"];
@@ -42,9 +43,8 @@ export default function ResumeEditor({
 
   if (candidate?.resume?.analysis) {
     return (
-      <div className="flex flex-col gap-2">
-        <h2 className="text-lg font-medium">Analysis</h2>
-        <Response>{candidate.resume.analysis.analysis}</Response>
+      <div className="flex gap-2">
+        <TiptapEditor content={candidate.resume.analysis.analysis} />
       </div>
     );
   }

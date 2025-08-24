@@ -10,6 +10,7 @@ import ResumePreview from "./_components/resume-preview";
 import { ResizableHandle, ResizablePanel } from "@/components/ui/resizable";
 import { ResizablePanelGroup } from "@/components/ui/resizable";
 import ResumeEditor from "./_components/resume-editor";
+import { useWidgetStore } from "@/stores/widget";
 
 export default function CreateCandidatePage() {
   const { candidate_id } = useParams<{ candidate_id: string }>();
@@ -18,6 +19,8 @@ export default function CreateCandidatePage() {
     useGetCandidate(candidate_id);
 
   const { setOpen } = useSidebar();
+
+  const { open: isOpenWidget } = useWidgetStore();
 
   useEffect(() => {
     setOpen(false);
@@ -39,11 +42,15 @@ export default function CreateCandidatePage() {
           direction="horizontal"
           className="rounded-lg border bg-background"
         >
-          <ResizablePanel defaultSize={40}>
-            <ResumePreview candidate={candidate?.data} />
-          </ResizablePanel>
-          <ResizableHandle withHandle />
-          <ResizablePanel defaultSize={60}>
+          {!isOpenWidget && (
+            <>
+              <ResizablePanel defaultSize={40}>
+                <ResumePreview candidate={candidate?.data} />
+              </ResizablePanel>
+              <ResizableHandle withHandle />
+            </>
+          )}
+          <ResizablePanel defaultSize={isOpenWidget ? 100 : 60}>
             <ResumeEditor
               candidate={candidate?.data}
               isLoading={isCandidateLoading}

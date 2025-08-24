@@ -2,6 +2,7 @@ import Fonts from "@/assets/font";
 import { getSEOTags } from "@/lib/seo";
 import Providers from "@/providers";
 import "@/styles/globals.css";
+import "@/styles/globals.scss";
 
 export const metadata = getSEOTags();
 

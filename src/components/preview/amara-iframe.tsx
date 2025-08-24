@@ -98,7 +98,7 @@ export default function AmaraIframe({
       src={src}
       title={title}
       className={cn(
-        "h-full w-full rounded-lg border-0 bg-white dark:bg-neutral-900",
+        "h-full w-full border-0 bg-white dark:bg-neutral-900",
         className,
       )}
       // onLoad={handleLoad}
