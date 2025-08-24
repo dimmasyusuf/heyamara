@@ -1,7 +1,7 @@
 "use client";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 
 import { useRouter, useSearchParams } from "next/navigation";
 
@@ -66,14 +66,34 @@ export default function AmaraTable({
   const orderParam = "order";
   const offsetParam = "page";
   const limitParam = "limit";
+  const searchParam = "search";
 
-  const [currentPage, setCurrentPage] = useState(pagination?.page || 1);
-  const [rowsPerPage, setRowsPerPage] = useState(pagination?.per_page || 10);
+  const [currentPage, setCurrentPage] = useState(() => {
+    const urlPage = searchParams.get(offsetParam);
+    if (urlPage) return parseInt(urlPage);
+    return 1; // Always default to 1 if no URL param
+  });
+
+  const [rowsPerPage, setRowsPerPage] = useState(() => {
+    const urlLimit = searchParams.get(limitParam);
+    if (urlLimit) {
+      const parsed = parseInt(urlLimit);
+      return isNaN(parsed) || parsed <= 0 ? 10 : parsed;
+    }
+    return 10; // Always default to 10 if no URL param
+  });
+
+  // Explicit select value state - separate from rowsPerPage for better control
+  const [selectValue, setSelectValue] = useState<string>("");
+
   const [sortColumn, setSortColumn] = useState<string | null>(
     searchParams.get(sortParam) || null,
   );
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">(
     (searchParams.get(orderParam) as "asc" | "desc") || "asc",
+  );
+  const [searchQuery, setSearchQuery] = useState(
+    searchParams.get(searchParam) || "",
   );
 
   const keys = useMemo(
@@ -83,31 +103,80 @@ export default function AmaraTable({
 
   // Dynamic rows per page options based on total data
   const getDynamicRowsPerPageOptions = () => {
-    const baseOptions = [5, 10, 25, 50];
+    const baseOptions = [1, 5, 10, 25, 50];
 
-    if (!pagination?.total) return baseOptions;
+    // Always return base options if no pagination or total is 0
+    if (!pagination?.total || pagination.total === 0)
+      return baseOptions.slice(1); // Skip 1 for empty state
 
-    // Filter options that are less than or equal to total items
+    // If total is very small, include relevant small options
+    if (pagination.total <= 5) {
+      return [1, 5, 10];
+    }
+
+    // Filter options that are less than or equal to total items, but keep at least some options
     const filteredOptions = baseOptions.filter(
       (option) => option <= pagination.total,
     );
 
-    // If no options are available (total is very small), include the smallest option
-    if (filteredOptions.length === 0) {
-      return [baseOptions[0]];
-    }
-
-    return filteredOptions;
+    return filteredOptions.length > 0
+      ? filteredOptions
+      : baseOptions.slice(0, 2); // [1, 5]
   };
 
   const rowsPerPageOptions = getDynamicRowsPerPageOptions();
 
-  // Update local state when pagination prop changes
+  // Sync select value with rowsPerPage - this ensures the select always shows the correct value
   useEffect(() => {
-    if (pagination) {
+    const currentOptions = getDynamicRowsPerPageOptions();
+
+    // If current rowsPerPage is not in available options, reset to first available option
+    if (!currentOptions.includes(rowsPerPage)) {
+      const newRowsPerPage = currentOptions[0] || 10;
+      setRowsPerPage(newRowsPerPage);
+      setSelectValue(newRowsPerPage.toString());
+
+      // Update URL as well
+      updateSearchParams({
+        [limitParam]: newRowsPerPage.toString(),
+      });
+    } else {
+      // Set select value to current rowsPerPage if it's valid
+      setSelectValue(rowsPerPage.toString());
+    }
+  }, [rowsPerPage, pagination?.total]);
+
+  // Update local state when pagination prop changes or URL params change
+  useEffect(() => {
+    const urlPage = searchParams.get(offsetParam);
+    const urlLimit = searchParams.get(limitParam);
+    const urlSearch = searchParams.get(searchParam);
+
+    // Always set a valid page number
+    if (urlPage) {
+      const parsedPage = parseInt(urlPage);
+      if (!isNaN(parsedPage) && parsedPage > 0) {
+        setCurrentPage(parsedPage);
+      }
+    } else if (pagination?.page && pagination.page > 0) {
       setCurrentPage(pagination.page);
     }
-  }, [pagination]);
+
+    // Always set a valid rows per page
+    if (urlLimit) {
+      const parsedLimit = parseInt(urlLimit);
+      if (!isNaN(parsedLimit) && parsedLimit > 0) {
+        setRowsPerPage(parsedLimit);
+      }
+    } else if (pagination?.per_page && pagination.per_page > 0) {
+      setRowsPerPage(pagination.per_page);
+    }
+
+    // Update search query from URL
+    if (urlSearch !== null) {
+      setSearchQuery(urlSearch);
+    }
+  }, [pagination, searchParams]);
 
   // Update URL search params
   const updateSearchParams = (updates: Record<string, string | null>) => {
@@ -149,6 +218,10 @@ export default function AmaraTable({
 
   const handleRowsPerPageChange = (newRowsPerPage: string) => {
     const newLimit = parseInt(newRowsPerPage);
+    if (isNaN(newLimit) || newLimit <= 0) return;
+
+    // Update both select value and rows per page state
+    setSelectValue(newRowsPerPage);
     setRowsPerPage(newLimit);
     setCurrentPage(1); // Reset to first page when changing rows per page
 
@@ -157,6 +230,30 @@ export default function AmaraTable({
       [offsetParam]: "1",
     });
   };
+
+  const handleSearch = (query: string) => {
+    setSearchQuery(query);
+    setCurrentPage(1); // Reset to first page when searching
+
+    updateSearchParams({
+      [searchParam]: query || null,
+      [offsetParam]: "1",
+    });
+  };
+
+  // Debounced search to avoid too many API calls
+  const debouncedSearch = useCallback(
+    (() => {
+      let timeoutId: NodeJS.Timeout;
+      return (query: string) => {
+        clearTimeout(timeoutId);
+        timeoutId = setTimeout(() => {
+          handleSearch(query);
+        }, 500); // 500ms delay
+      };
+    })(),
+    [],
+  );
 
   // Utility to get nested value by path (e.g., 'source_file.size')
   function getValueByPath(obj: any, path: string) {
@@ -229,9 +326,14 @@ export default function AmaraTable({
 
   // Calculate items range for display
   const getItemsRange = () => {
-    if (!pagination) return { start: 0, end: 0, total: 0 };
+    // During loading or when no pagination data, show loading state
+    if (isLoading || !pagination) return { start: 0, end: 0, total: 0 };
 
     const { page, total } = pagination;
+
+    // If no data, return zeros
+    if (total === 0) return { start: 0, end: 0, total: 0 };
+
     const start = (page - 1) * rowsPerPage + 1;
     const end = Math.min(page * rowsPerPage, total);
 
@@ -241,9 +343,18 @@ export default function AmaraTable({
   const { start, end, total } = getItemsRange();
 
   return (
-    <div className="flex flex-col overflow-auto rounded-2xl">
+    <div className="flex flex-col overflow-auto rounded-2xl bg-background">
       <div className="flex items-center justify-between rounded-t-2xl border border-b-0 px-6 py-4">
-        <Input type="text" placeholder="Search" className="max-w-64" />
+        <Input
+          type="text"
+          placeholder="Search"
+          className="max-w-64"
+          value={searchQuery}
+          onChange={(e) => {
+            setSearchQuery(e.target.value);
+            debouncedSearch(e.target.value);
+          }}
+        />
         {actions}
       </div>
 
@@ -342,20 +453,21 @@ export default function AmaraTable({
       </table>
 
       {/* Footer */}
-
       <div className="flex min-w-full items-center justify-between gap-6 rounded-b-2xl border border-t-0 px-6 py-3">
         {/* Left side - Rows per page and total items */}
-
         <div className="flex items-center gap-2">
           <span className="text-pro-gray-200 whitespace-nowrap text-sm">
             Show
           </span>
           <Select
-            value={rowsPerPage.toString()}
-            onValueChange={handleRowsPerPageChange}
+            value={selectValue}
+            onValueChange={(value) => {
+              setSelectValue(value);
+              handleRowsPerPageChange(value);
+            }}
           >
-            <SelectTrigger className="w-fit">
-              <SelectValue />
+            <SelectTrigger className="w-fit min-w-[60px]">
+              <SelectValue>{selectValue || rowsPerPage}</SelectValue>
             </SelectTrigger>
             <SelectContent>
               {rowsPerPageOptions.map((option) => (
@@ -371,11 +483,12 @@ export default function AmaraTable({
         </div>
 
         {/* Right side - Pagination */}
-
         <div className="flex items-center gap-6">
-          <span className="text-pro-gray-200 whitespace-nowrap text-sm">
-            {start}-{end} of {total}
-          </span>
+          {!isLoading && (
+            <span className="text-pro-gray-200 whitespace-nowrap text-sm">
+              {`${start}-${end} of ${total}`}
+            </span>
+          )}
 
           <div className="flex items-center gap-1">
             {/* First page */}
@@ -383,7 +496,7 @@ export default function AmaraTable({
               type="button"
               disabled={currentPage === 1}
               onClick={() => handlePageChange(1)}
-              className="border-pro-snow-200 hover:bg-pro-snow-100 disabled:bg-pro-snow-100 flex h-10 w-10 items-center justify-center rounded-lg border text-sm [&_svg]:size-4"
+              className="flex h-10 w-10 items-center justify-center rounded-lg text-sm hover:border disabled:cursor-not-allowed disabled:bg-secondary [&_svg]:size-4"
             >
               <ChevronsLeftIcon />
             </button>
@@ -393,7 +506,7 @@ export default function AmaraTable({
               type="button"
               disabled={currentPage === 1}
               onClick={() => handlePageChange(currentPage - 1)}
-              className="border-pro-snow-200 hover:bg-pro-snow-100 disabled:bg-pro-snow-100 flex h-10 w-10 items-center justify-center rounded-lg border text-sm [&_svg]:size-4"
+              className="flex h-10 w-10 items-center justify-center rounded-lg text-sm hover:border disabled:cursor-not-allowed disabled:bg-secondary [&_svg]:size-4"
             >
               <ChevronLeftIcon />
             </button>
@@ -415,8 +528,8 @@ export default function AmaraTable({
                   className={cn(
                     `h-10 w-10 rounded-lg border text-sm`,
                     currentPage === pageNum
-                      ? "border-pro-primary bg-pro-primary-100 text-pro-primary"
-                      : "border-pro-snow-200 text-pro-gray-400 hover:bg-pro-snow-100",
+                      ? "border-pro-primary text-pro-primary"
+                      : "border-pro-snow-200 text-pro-gray-400 hover:border-pro-primary",
                   )}
                 >
                   {pageNum}
@@ -429,7 +542,7 @@ export default function AmaraTable({
               type="button"
               disabled={currentPage === pagination?.total_pages}
               onClick={() => handlePageChange(currentPage + 1)}
-              className="border-pro-snow-200 hover:bg-pro-snow-100 disabled:bg-pro-snow-100 flex h-10 w-10 items-center justify-center rounded-lg border text-sm [&_svg]:size-4"
+              className="flex h-10 w-10 items-center justify-center rounded-lg text-sm hover:border disabled:cursor-not-allowed disabled:bg-secondary [&_svg]:size-4"
             >
               <ChevronRightIcon />
             </button>
@@ -439,7 +552,7 @@ export default function AmaraTable({
               type="button"
               disabled={currentPage === pagination?.total_pages}
               onClick={() => handlePageChange(pagination?.total_pages || 1)}
-              className="border-pro-snow-200 hover:bg-pro-snow-100 disabled:bg-pro-snow-100 flex h-10 w-10 items-center justify-center rounded-lg border text-sm [&_svg]:size-4"
+              className="flex h-10 w-10 items-center justify-center rounded-lg text-sm hover:border disabled:cursor-not-allowed disabled:bg-secondary [&_svg]:size-4"
             >
               <ChevronsRightIcon />
             </button>

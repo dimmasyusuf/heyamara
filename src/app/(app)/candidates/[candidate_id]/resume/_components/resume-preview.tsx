@@ -32,38 +32,36 @@ export default function ResumePreview({ candidate }: ResumePreviewProps) {
     const fileUrl = URL.createObjectURL(files[0]);
 
     return (
-      <div className="flex h-full w-full p-6">
-        <div className="flex h-full w-full flex-col overflow-hidden rounded-lg border bg-background">
-          <div className="flex items-center justify-between gap-4 border-b p-4">
-            <div className="flex items-center gap-2">
-              <div className="flex size-10 items-center justify-center rounded-lg border">
-                <Upload size={16} className="text-muted-foreground" />
-              </div>
-              <div className="flex flex-col">
-                <span className="line-clamp-1 text-sm font-medium text-muted-foreground">
-                  {files[0].name}
-                </span>
-                <span className="line-clamp-1 text-xs text-muted-foreground">
-                  {formatBytes(files[0].size)}
-                </span>
-              </div>
+      <div className="flex h-full w-full flex-col overflow-hidden bg-background">
+        <div className="flex items-center justify-between gap-4 border-b p-4">
+          <div className="flex items-center gap-2">
+            <div className="flex size-10 items-center justify-center rounded-lg border">
+              <Upload size={16} className="text-muted-foreground" />
             </div>
-
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                setFiles([]);
-                URL.revokeObjectURL(fileUrl);
-              }}
-            >
-              <ArrowLeft className="h-4 w-4" />
-              Upload Another
-            </Button>
+            <div className="flex flex-col">
+              <span className="line-clamp-1 text-sm font-medium text-muted-foreground">
+                {files[0].name}
+              </span>
+              <span className="line-clamp-1 text-xs text-muted-foreground">
+                {formatBytes(files[0].size)}
+              </span>
+            </div>
           </div>
 
-          <AmaraIframe src={fileUrl} title={files[0].name} />
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              setFiles([]);
+              URL.revokeObjectURL(fileUrl);
+            }}
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Upload Another
+          </Button>
         </div>
+
+        <AmaraIframe src={fileUrl} title={files[0].name} />
       </div>
     );
   }

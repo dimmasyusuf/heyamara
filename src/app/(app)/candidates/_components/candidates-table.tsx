@@ -1,7 +1,6 @@
 "use client";
 
 import { AmaraTable, AmaraTableColumn } from "@/components/table";
-import { Button } from "@/components/ui/button";
 import {
   IconBriefcase,
   IconCalendar,
@@ -12,18 +11,32 @@ import {
   IconStar,
   IconUser,
 } from "@tabler/icons-react";
-import Link from "next/link";
 import CreateCandidateDialog from "./create-candidate-dialog";
 import { useGetCandidates } from "@/services/candidate/service";
 import { Candidate } from "@prisma/client";
 import { format } from "date-fns";
 import CandidatesTableAction from "./candidates-table-action";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
+import DeleteCandidateDialog from "./delete-candidate-dialog";
+import { useState } from "react";
 
 export default function CandidatesTable() {
   const router = useRouter();
+  const [open, setOpen] = useState(false);
+  const [selectedCandidate, setSelectedCandidate] = useState<Candidate | null>(
+    null,
+  );
 
-  const { data, isLoading } = useGetCandidates();
+  const searchParams = useSearchParams();
+  const search = searchParams.get("search") || "";
+  const limit = parseInt(searchParams.get("limit") || "10");
+  const offset = parseInt(searchParams.get("page") || "1");
+
+  const { data, isLoading } = useGetCandidates({
+    search,
+    limit,
+    offset,
+  });
 
   const tableColumns: AmaraTableColumn[] = [
     {
@@ -106,18 +119,20 @@ export default function CandidatesTable() {
   };
 
   const handleDelete = (candidate: Candidate) => {
-    console.log(candidate);
+    setSelectedCandidate(candidate);
+    setOpen(true);
   };
 
   const tableActions = (
     <div className="flex items-center gap-2">
       <CreateCandidateDialog />
-
-      <Button asChild>
-        <Link href="/candidates/create">First</Link>
-      </Button>
-
-      <Button>Second</Button>
+      {selectedCandidate && (
+        <DeleteCandidateDialog
+          open={open}
+          setOpen={setOpen}
+          candidate={selectedCandidate}
+        />
+      )}
     </div>
   );
 

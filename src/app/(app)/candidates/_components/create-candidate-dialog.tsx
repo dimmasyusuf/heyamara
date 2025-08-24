@@ -91,7 +91,7 @@ export default function CreateCandidateDialog() {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button size="sm">
+        <Button>
           <IconPlus />
           New
         </Button>

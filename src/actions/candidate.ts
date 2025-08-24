@@ -4,7 +4,6 @@ import { createClient } from "@/lib/supabase/server";
 import { prisma } from "@/lib/prisma";
 import BytePlus from "@/lib/byteplus";
 import { DocumentProcessor } from "@/helper/processor";
-import { candidatePrompt } from "@/helper/prompt/candidate";
 import { Response } from "@/helper/response";
 import {
   AnalyzeResumeRequest,
@@ -18,6 +17,7 @@ import {
   UpdateCandidateRequest,
   GetCandidatesParams,
 } from "@/types/candidate";
+import ResumePrompt from "@/helper/prompt/resume";
 
 export const getCandidates = async (params?: GetCandidatesParams) => {
   const { search, offset, limit } = params || {};
@@ -25,14 +25,28 @@ export const getCandidates = async (params?: GetCandidatesParams) => {
   const page = offset || 1;
   const per_page = limit || 10;
 
-  const total = await prisma.candidate.count();
+  const whereClause =
+    search && search.trim()
+      ? {
+          OR: [
+            { name: { contains: search.trim(), mode: "insensitive" as const } },
+            { role: { contains: search.trim(), mode: "insensitive" as const } },
+            {
+              location: {
+                contains: search.trim(),
+                mode: "insensitive" as const,
+              },
+            },
+          ],
+        }
+      : {};
+
+  const total = await prisma.candidate.count({
+    where: whereClause,
+  });
 
   const candidates = await prisma.candidate.findMany({
-    where: {
-      name: { contains: search, mode: "insensitive" },
-      role: { contains: search, mode: "insensitive" },
-      location: { contains: search, mode: "insensitive" },
-    },
+    where: whereClause,
     skip: (page - 1) * per_page,
     take: per_page,
   });
@@ -158,7 +172,9 @@ export async function uploadResume(formData: FormData) {
 
   const { data, error } = await supabase.storage
     .from("resumes")
-    .upload(file.name, file);
+    .upload(file.name, file, {
+      upsert: true,
+    });
 
   if (error) {
     return Response({
@@ -177,6 +193,7 @@ export async function uploadResume(formData: FormData) {
 export async function analyzeResume(request: AnalyzeResumeRequest) {
   const byteplus = new BytePlus();
   const processor = new DocumentProcessor();
+  const resumePrompt = new ResumePrompt();
 
   const file = request.get("file") as File;
   const candidate_id = request.get("candidate_id") as string;
@@ -186,7 +203,7 @@ export async function analyzeResume(request: AnalyzeResumeRequest) {
   const { text } = processedDocument;
 
   // Stage 2: Prompt Generation (20%)
-  const prompt = candidatePrompt(text);
+  const prompt = resumePrompt.analyze(text);
 
   // Stage 3: File Upload (30%)
   const uploadResponse = await uploadResume(request);

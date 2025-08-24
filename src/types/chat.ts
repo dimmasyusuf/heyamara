@@ -28,4 +28,5 @@ export interface StreamChatRequest {
   type?: ChatMessageType;
   chat_id: string;
   message: string;
+  candidate_id?: string;
 }

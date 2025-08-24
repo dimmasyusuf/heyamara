@@ -37,7 +37,7 @@ export default function CreateCandidatePage() {
           },
         ]}
       />
-      <main className="flex h-[calc(100dvh-64px)] overflow-y-auto bg-secondary p-6">
+      <main className="flex h-[calc(100dvh-64px)] overflow-y-auto bg-accent p-6">
         <ResizablePanelGroup
           direction="horizontal"
           className="rounded-lg border bg-background"

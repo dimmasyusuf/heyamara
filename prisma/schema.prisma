@@ -144,7 +144,7 @@ model ChatMessage {
     chatSessionId String          @map("chat_session_id")
     createdAt     DateTime        @default(now()) @map("created_at")
     updatedAt     DateTime        @updatedAt @map("updated_at")
-    type          ChatMessageType @default(CANDIDATE)
+    type          ChatMessageType @default(RESUME)
     role          ChatMessageRole @default(USER)
     chatSession   ChatSession     @relation(fields: [chatSessionId], references: [id], onDelete: Cascade)
 }
@@ -155,7 +155,7 @@ enum ChatMessageRole {
 }
 
 enum ChatMessageType {
-    CANDIDATE
+    RESUME
 }
 
 enum CandidateStatus {

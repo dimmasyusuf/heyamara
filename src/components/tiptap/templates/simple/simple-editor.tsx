@@ -228,7 +228,7 @@ export function TiptapEditor({ content }: TiptapEditorProps) {
       Subscript,
       Selection,
       BubbleMenu.configure({
-        element: null, // We'll handle this with React component
+        element: null,
       }),
       ImageUploadNode.configure({
         accept: "image/*",
@@ -240,6 +240,12 @@ export function TiptapEditor({ content }: TiptapEditorProps) {
     ],
     content: content || "",
   });
+
+  React.useEffect(() => {
+    if (editor && content !== editor.getHTML()) {
+      editor.commands.setContent(content || "");
+    }
+  }, [editor, content]);
 
   const rect = useCursorVisibility({
     editor,

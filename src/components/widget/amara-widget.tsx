@@ -1,14 +1,16 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { BotIcon, TrashIcon, XIcon } from "lucide-react";
+import { BotIcon, GlobeIcon, TrashIcon, XIcon } from "lucide-react";
 import Cookies from "js-cookie";
 import { nanoid } from "nanoid";
-
-import { cn } from "@/lib/utils";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import z from "zod";
+import { useParams, usePathname } from "next/navigation";
+import Lottie from "lottie-react";
+
+import { cn } from "@/lib/utils";
 import {
   CHAT_KEY,
   useCreateChatSession,
@@ -16,9 +18,7 @@ import {
   useGetChatSession,
 } from "@/services/chat";
 import blobAnimation from "@/assets/lottie/blob.json";
-import Lottie from "lottie-react";
 import { useWidgetStore } from "@/stores/widget";
-import { useParams, usePathname } from "next/navigation";
 import {
   Conversation,
   ConversationContent,
@@ -27,68 +27,245 @@ import {
 import { Message, MessageContent } from "@/components/ai-elements/message";
 import {
   PromptInput,
+  PromptInputButton,
+  PromptInputModelSelect,
+  PromptInputModelSelectContent,
+  PromptInputModelSelectItem,
+  PromptInputModelSelectTrigger,
+  PromptInputModelSelectValue,
   PromptInputSubmit,
   PromptInputTextarea,
   PromptInputToolbar,
+  PromptInputTools,
 } from "@/components/ai-elements/prompt-input";
 import { Response } from "@/components/ai-elements/response";
 import { Loader } from "@/components/ai-elements/loader";
 import { ChatMessage } from "@prisma/client";
 import { streamChat } from "@/actions/chat";
+import { Suggestion, Suggestions } from "../ai-elements/suggestion";
+import { IconTrash, IconX } from "@tabler/icons-react";
+import { Button } from "../ui/button";
 
+// ===== CONSTANTS =====
 const WIDGET_TYPES = {
-  CANDIDATE: "AMARA_WIDGET_CANDIDATE",
+  RESUME: "AMARA_WIDGET_RESUME",
 } as const;
 
+const SUGGESTIONS = [
+  "Optimize this resume",
+  "Add skills to make resume stand out",
+  "Improve formatting and layout",
+  "Suggest better action verbs",
+  "What sections to add/remove?",
+];
+
+const MODELS = [
+  { id: "seed-1-6-250615", name: "Seed 1.6" },
+  { id: "seed-1-6-flash-250715", name: "Seed 1.6 Flash" },
+  { id: "deepseek-v3-1-250821", name: "DeepSeek V3.1" },
+];
+
+const ANIMATED_DOTS = [".", "..", "..."];
+const DOT_ANIMATION_INTERVAL = 500;
+
+// ===== TYPES =====
 const FormSchema = z.object({
   message: z.string().min(2, {
     message: "Message must be at least 2 characters.",
   }),
 });
 
-export default function AmaraWidget() {
-  const { project_id, document_id, analysis_id } = useParams<{
-    project_id: string;
-    document_id: string;
-    analysis_id: string;
-  }>();
+type FormData = z.infer<typeof FormSchema>;
 
-  const { open, setOpen } = useWidgetStore();
+type ExtendedChatMessage = ChatMessage & {
+  isLoading?: boolean;
+  isStreaming?: boolean;
+  isNewMessage?: boolean;
+};
 
-  // Close widget on route change
-  const pathname = usePathname();
+// ===== CUSTOM HOOKS =====
+
+/**
+ * Hook to manage animated placeholder dots
+ */
+function useAnimatedDots(isActive: boolean) {
+  const [dots, setDots] = useState(".");
 
   useEffect(() => {
-    setOpen(false);
-  }, [pathname, setOpen]);
+    if (!isActive) return;
 
-  // Main state - using Prisma types with additional UI state
+    let index = 0;
+    const interval = setInterval(() => {
+      index = (index + 1) % ANIMATED_DOTS.length;
+      setDots(ANIMATED_DOTS[index]);
+    }, DOT_ANIMATION_INTERVAL);
+
+    return () => clearInterval(interval);
+  }, [isActive]);
+
+  return dots;
+}
+
+/**
+ * Hook to manage cookie-based chat persistence
+ */
+function useChatPersistence() {
+  const getCookieKey = useCallback(() => WIDGET_TYPES.RESUME, []);
+
+  const getStoredChatId = useCallback(
+    () => Cookies.get(getCookieKey()),
+    [getCookieKey],
+  );
+
+  const storeChatId = useCallback(
+    (chatId: string) => {
+      const cookieKey = getCookieKey();
+      Cookies.set(cookieKey, chatId);
+    },
+    [getCookieKey],
+  );
+
+  const clearStoredChatId = useCallback(() => {
+    Cookies.remove(getCookieKey());
+  }, [getCookieKey]);
+
+  return {
+    getStoredChatId,
+    storeChatId,
+    clearStoredChatId,
+  };
+}
+
+/**
+ * Hook to manage auto-scroll behavior
+ */
+function useAutoScroll(shouldScroll: boolean, dependency: any[]) {
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (shouldScroll) {
+      scrollRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "end",
+      });
+    }
+  }, dependency);
+
+  return scrollRef;
+}
+
+// ===== MESSAGE UTILITIES =====
+
+/**
+ * Creates the default greeting message shown when widget opens
+ */
+function createDefaultGreeting(): ExtendedChatMessage {
+  return {
+    id: `bot-${nanoid()}`,
+    type: "RESUME",
+    role: "ASSISTANT",
+    content: `Hi! 👋🏻\nHow can I help you today?`,
+    chatSessionId: "",
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    isLoading: false,
+    isStreaming: false,
+    isNewMessage: false,
+  };
+}
+
+/**
+ * Creates a user message from form input
+ */
+function createUserMessage(
+  content: string,
+  chatId: string,
+): ExtendedChatMessage {
+  return {
+    id: `user-${nanoid()}`,
+    type: "RESUME",
+    role: "USER",
+    content,
+    chatSessionId: chatId,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    isLoading: false,
+    isStreaming: false,
+    isNewMessage: false,
+  };
+}
+
+/**
+ * Creates a bot message that will be populated via streaming
+ */
+function createBotMessage(chatId: string): ExtendedChatMessage {
+  return {
+    id: `bot-${nanoid()}`,
+    type: "RESUME",
+    role: "ASSISTANT",
+    content: "",
+    chatSessionId: chatId,
+    createdAt: new Date(),
+    updatedAt: new Date(),
+    isLoading: true,
+    isStreaming: true,
+    isNewMessage: true,
+  };
+}
+
+/**
+ * Transforms API messages to UI format
+ */
+function transformApiMessagesToUI(apiMessages: any[]): ExtendedChatMessage[] {
+  return apiMessages.map((message) => ({
+    id: `msg-${nanoid()}`,
+    content: message.content,
+    createdAt: message.created_at,
+    role: message.role === "USER" ? "USER" : "ASSISTANT",
+    chatSessionId: message.chat_session_id,
+    updatedAt: message.updated_at,
+    type: "RESUME" as any,
+    isLoading: false,
+    isStreaming: false,
+    isNewMessage: false,
+  }));
+}
+
+// ===== MAIN COMPONENT =====
+export default function AmaraWidget() {
+  const { candidate_id } = useParams<{ candidate_id: string }>();
+  const { open, setOpen } = useWidgetStore();
+  const pathname = usePathname();
+
+  // ===== STATE MANAGEMENT =====
   const [chatId, setChatId] = useState<string | null>(null);
-  const [chats, setChats] = useState<
-    (ChatMessage & {
-      isLoading?: boolean;
-      isStreaming?: boolean;
-      isNewMessage?: boolean;
-    })[]
-  >([]);
-  const [isInitialized, setIsInitialized] = useState<boolean>(false);
-  const [isStreaming, setIsStreaming] = useState<boolean>(false);
-  const [isFocused, setIsFocused] = useState(false);
-  const [animatedPlaceholder, setAnimatedPlaceholder] = useState(".");
+  const [messages, setMessages] = useState<ExtendedChatMessage[]>([]);
+  const [isInitialized, setIsInitialized] = useState(false);
+  const [isStreaming, setIsStreaming] = useState(false);
+  const [selectedModel, setSelectedModel] = useState(MODELS[0].id);
+  const [webSearchEnabled, setWebSearchEnabled] = useState(false);
 
-  // Refs for managing streaming state
+  // ===== REFS FOR STREAMING CONTROL =====
   const isStreamingRef = useRef(false);
-  const startStreamingRef = useRef<string | null>(null);
-  const chatEndRef = useRef<HTMLDivElement>(null);
+  const currentStreamingMessageRef = useRef<string | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  // API hooks
+  // ===== CUSTOM HOOKS =====
+  const { getStoredChatId, storeChatId, clearStoredChatId } =
+    useChatPersistence();
+  const animatedDots = useAnimatedDots(isStreaming);
+  const scrollRef = useAutoScroll(isInitialized && messages.length > 0, [
+    messages,
+    isInitialized,
+  ]);
+
+  // ===== API HOOKS =====
   const {
     data: chatData,
     isLoading: isLoadingChat,
     refetch: refetchChat,
   } = useGetChatSession(chatId as string, {
-    queryKey: CHAT_KEY.GET_CHAT_SESSION(chatId),
+    queryKey: CHAT_KEY.GET_CHAT_SESSION(chatId as string),
     enabled: !!chatId,
   });
 
@@ -97,109 +274,75 @@ export default function AmaraWidget() {
   const { mutateAsync: deleteChat, isPending: isDeletingChat } =
     useDeleteChatSession();
 
-  // Form setup
-  const form = useForm<z.infer<typeof FormSchema>>({
+  // ===== FORM SETUP =====
+  const form = useForm<FormData>({
     resolver: zodResolver(FormSchema),
     defaultValues: { message: "" },
   });
 
-  // Helper functions
-  const getCookieKey = useCallback(() => WIDGET_TYPES.CANDIDATE, []);
-  const getExistingChatId = useCallback(
-    () => Cookies.get(getCookieKey()),
-    [getCookieKey],
-  );
+  // ===== CHAT SESSION MANAGEMENT =====
 
-  const createDefaultGreeting = useCallback(
-    (): ChatMessage & {
-      isLoading?: boolean;
-      isStreaming?: boolean;
-      isNewMessage?: boolean;
-    } => ({
-      id: `bot-${nanoid()}`,
-      type: "CANDIDATE",
-      role: "ASSISTANT",
-      content: `Hi! 👋🏻\nHow can I help you today?`,
-      chatSessionId: "",
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      isLoading: false,
-      isStreaming: false,
-      isNewMessage: false,
-    }),
-    [],
-  );
-
-  // Chat management functions
-  const handleCreateChat = useCallback(
-    async (userMessage?: string): Promise<string | null> => {
+  /**
+   * Creates a new chat session
+   */
+  const handleCreateChatSession = useCallback(
+    async (firstMessage?: string): Promise<string | null> => {
       try {
         const response = await createChat({
-          type: "CANDIDATE",
-          message: userMessage || "New chat",
+          type: "RESUME",
+          message: firstMessage || "New chat",
         });
 
         if (response?.data?.id) {
-          const cookieKey = getCookieKey();
-          Cookies.set(cookieKey, response.data.id);
-          setChatId(response.data.id);
-          return response.data.id;
+          const newChatId = response.data.id;
+          storeChatId(newChatId);
+          setChatId(newChatId);
+          return newChatId;
         }
       } catch (error) {
-        console.error("Failed to create chat:", error);
+        console.error("Failed to create chat session:", error);
       }
       return null;
     },
-    [createChat, getCookieKey],
+    [createChat, storeChatId],
   );
 
-  const handleClearChat = async () => {
+  /**
+   * Clears the current chat session
+   */
+  const handleClearChat = useCallback(async () => {
     try {
-      // If there's an existing chat, delete it
+      // Delete existing chat from database
       if (chatId) {
         await deleteChat(chatId);
       }
 
-      // Clear cookie and reset state
-      Cookies.remove(getCookieKey());
+      // Reset all state
+      clearStoredChatId();
       setChatId(null);
-
-      // Reset to default greeting immediately and keep initialized
-      setChats([createDefaultGreeting()]);
+      setMessages([createDefaultGreeting()]);
       setIsInitialized(true);
 
-      // Refetch chat data to ensure UI is up to date
+      // Refresh data
       refetchChat();
     } catch (error) {
       console.error("Failed to clear chat:", error);
-      // Even if delete fails, reset the UI
-      Cookies.remove(getCookieKey());
-      setChatId(null);
-      setChats([createDefaultGreeting()]);
-      setIsInitialized(true);
 
-      // Refetch chat data even on error
+      // Reset UI even if API call fails
+      clearStoredChatId();
+      setChatId(null);
+      setMessages([createDefaultGreeting()]);
+      setIsInitialized(true);
       refetchChat();
     }
-  };
+  }, [chatId, deleteChat, clearStoredChatId, refetchChat]);
 
-  // Initialize widget with default greeting
-  const initializeWidget = useCallback(() => {
-    const existingChatId = getExistingChatId();
+  // ===== MESSAGE STREAMING =====
 
-    if (existingChatId) {
-      // Load existing chat
-      setChatId(existingChatId);
-      setIsInitialized(false); // Will be set to true when chat data loads
-    } else {
-      // Show default greeting, no chat created yet
-      setChats([createDefaultGreeting()]);
-      setIsInitialized(true);
-    }
-  }, [getExistingChatId, createDefaultGreeting]);
-
-  // Streaming message handler using streamChat action
-  const handleStreamingMessage = useCallback(
+  /**
+   * Handles streaming response from the AI
+   */
+  const handleMessageStreaming = useCallback(
     async (
       userMessage: string,
       botMessageId: string,
@@ -207,98 +350,163 @@ export default function AmaraWidget() {
     ) => {
       setIsStreaming(true);
       isStreamingRef.current = true;
-      startStreamingRef.current = userMessage;
+      currentStreamingMessageRef.current = userMessage;
 
       try {
-        const content = await streamChat({
+        const streamedContent = await streamChat({
           message: userMessage,
           chat_id: currentChatId,
-          type: "CANDIDATE",
+          type: "RESUME",
+          candidate_id,
         });
 
-        // Update the bot message with the result
-        setChats((currentChats) =>
-          currentChats.map((chat) =>
-            chat.id === botMessageId
+        // Update the bot message with streamed content
+        setMessages((currentMessages) =>
+          currentMessages.map((message) =>
+            message.id === botMessageId
               ? {
-                  ...chat,
+                  ...message,
                   content:
-                    (typeof content === "string" && content) ||
+                    (typeof streamedContent === "string" && streamedContent) ||
                     "Sorry, I couldn't process your request.",
                   isLoading: false,
                   isStreaming: false,
                   isNewMessage: false,
                 }
-              : chat,
+              : message,
           ),
         );
       } catch (error) {
-        console.error("Streaming error:", error);
+        console.error("Message streaming failed:", error);
 
-        // Handle error and stop both loading and streaming
-        setChats((currentChats) =>
-          currentChats.map((chat) =>
-            chat.id === botMessageId
+        // Handle streaming error
+        setMessages((currentMessages) =>
+          currentMessages.map((message) =>
+            message.id === botMessageId
               ? {
-                  ...chat,
+                  ...message,
                   content:
                     "Sorry, I encountered an error while processing your request.",
                   isLoading: false,
-                  isNewMessage: false,
                   isStreaming: false,
+                  isNewMessage: false,
                 }
-              : chat,
+              : message,
           ),
         );
       } finally {
+        // Clean up streaming state
         isStreamingRef.current = false;
-        startStreamingRef.current = null;
+        currentStreamingMessageRef.current = null;
         setIsStreaming(false);
-        // Refetch chat data after streaming completes
         refetchChat();
       }
     },
-    [refetchChat],
+    [candidate_id, refetchChat],
   );
 
-  // Check for new messages that need streaming
-  const checkForNewMessage = useCallback(async () => {
-    const newBotMessage = chats.find(
-      (chat) =>
-        chat.isNewMessage && chat.role === "ASSISTANT" && chat.isLoading,
+  /**
+   * Processes new messages that need streaming
+   */
+  const processNewMessages = useCallback(async () => {
+    // Find a new bot message that needs streaming
+    const newBotMessage = messages.find(
+      (message) =>
+        message.isNewMessage &&
+        message.role === "ASSISTANT" &&
+        message.isLoading,
     );
 
-    if (!newBotMessage || isStreamingRef.current) return;
+    if (!newBotMessage || isStreamingRef.current) {
+      return;
+    }
 
-    const botIndex = chats.findIndex((chat) => chat.id === newBotMessage.id);
-    if (botIndex <= 0) return;
+    // Find the corresponding user message
+    const botMessageIndex = messages.findIndex(
+      (msg) => msg.id === newBotMessage.id,
+    );
+    if (botMessageIndex <= 0) return;
 
-    const userMessage = chats[botIndex - 1];
+    const userMessage = messages[botMessageIndex - 1];
     if (!userMessage || userMessage.role !== "USER") return;
 
-    const messageText = userMessage.content.trim();
-    if (!messageText || startStreamingRef.current === messageText) return;
+    const messageContent = userMessage.content.trim();
+    if (
+      !messageContent ||
+      currentStreamingMessageRef.current === messageContent
+    ) {
+      return;
+    }
 
-    // Get or create chat ID
-    let currentChatId = chatId;
-    if (!currentChatId) {
-      // Ensure we stay initialized during chat creation
+    // Ensure we have a chat session
+    let activeChatId = chatId;
+    if (!activeChatId) {
       setIsInitialized(true);
-      // Pass the user message to handleCreateChat for naming
-      currentChatId = await handleCreateChat(messageText);
-      if (!currentChatId) {
-        console.error("Failed to create chat for streaming");
+      activeChatId = await handleCreateChatSession(messageContent);
+      if (!activeChatId) {
+        console.error("Failed to create chat session for streaming");
         return;
       }
     }
 
-    handleStreamingMessage(messageText, newBotMessage.id, currentChatId);
-  }, [chats, chatId, handleCreateChat, handleStreamingMessage]);
+    handleMessageStreaming(messageContent, newBotMessage.id, activeChatId);
+  }, [messages, chatId, handleCreateChatSession, handleMessageStreaming]);
 
-  const handleFocus = () => setIsFocused(true);
-  const handleBlur = () => setIsFocused(false);
+  // ===== WIDGET INITIALIZATION =====
 
-  const handleAutoResize = (
+  /**
+   * Initializes the widget when opened
+   */
+  const initializeWidget = useCallback(() => {
+    const existingChatId = getStoredChatId();
+
+    if (existingChatId) {
+      // Load existing chat session
+      setChatId(existingChatId);
+      setIsInitialized(false); // Will be set to true when data loads
+    } else {
+      // Show default greeting without creating a chat session
+      setMessages([createDefaultGreeting()]);
+      setIsInitialized(true);
+    }
+  }, [getStoredChatId]);
+
+  // ===== FORM HANDLING =====
+
+  /**
+   * Handles form submission and message sending
+   */
+  const handleFormSubmit = useCallback(
+    (data: FormData) => {
+      const userMessage = createUserMessage(data.message, chatId || "");
+      const botMessage = createBotMessage(chatId || "");
+
+      // Add both messages to the conversation
+      setMessages((prevMessages) => [...prevMessages, userMessage, botMessage]);
+
+      // Reset form and textarea
+      form.reset();
+      if (textareaRef.current) {
+        textareaRef.current.style.height = "20px";
+      }
+    },
+    [chatId, form],
+  );
+
+  /**
+   * Handles suggestion clicks
+   */
+  const handleSuggestionClick = useCallback(
+    (suggestion: string) => {
+      form.setValue("message", suggestion);
+      form.handleSubmit(handleFormSubmit)();
+    },
+    [form, handleFormSubmit],
+  );
+
+  // ===== TEXTAREA UTILITIES =====
+
+  const handleTextareaAutoResize = (
     e:
       | React.KeyboardEvent<HTMLTextAreaElement>
       | React.ClipboardEvent<HTMLTextAreaElement>,
@@ -306,9 +514,9 @@ export default function AmaraWidget() {
     const target = e.target as HTMLTextAreaElement;
 
     setTimeout(() => {
-      target.style.height = "20px"; // Reset to default height
+      target.style.height = "20px";
       if (target.scrollHeight > target.offsetHeight) {
-        target.style.height = `${target.scrollHeight}px`; // Adjust height based on content
+        target.style.height = `${target.scrollHeight}px`;
       }
     }, 0);
   };
@@ -321,218 +529,196 @@ export default function AmaraWidget() {
       e.preventDefault();
       await onSubmit();
     } else {
-      handleAutoResize(e);
+      handleTextareaAutoResize(e);
     }
   };
 
-  // Form submission handler
-  const onSubmit = (data: z.infer<typeof FormSchema>) => {
-    const userMessage: ChatMessage & {
-      isLoading?: boolean;
-      isStreaming?: boolean;
-      isNewMessage?: boolean;
-    } = {
-      id: `user-${nanoid()}`,
-      type: "CANDIDATE",
-      role: "USER",
-      content: data.message,
-      chatSessionId: chatId || "", // Assuming chatId is available
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      isLoading: false,
-      isStreaming: false,
-      isNewMessage: false,
-    };
+  // ===== EFFECTS =====
 
-    const botMessage: ChatMessage & {
-      isLoading?: boolean;
-      isStreaming?: boolean;
-      isNewMessage?: boolean;
-    } = {
-      id: `bot-${nanoid()}`,
-      type: "CANDIDATE",
-      role: "ASSISTANT",
-      content: "",
-      chatSessionId: chatId || "", // Assuming chatId is available
-      createdAt: new Date(),
-      updatedAt: new Date(),
-      isLoading: true,
-      isStreaming: true,
-      isNewMessage: true,
-    };
+  // Close widget on route change
+  useEffect(() => {
+    setOpen(false);
+  }, [pathname, setOpen]);
 
-    setChats([...chats, userMessage, botMessage]);
-    form.reset();
-
-    // Reset textarea height after form reset
-    if (textareaRef.current) {
-      textareaRef.current.style.height = "20px";
-    }
-  };
-
-  // Effects
-
-  // Initialize widget when it opens or when component mounts
+  // Initialize widget when opened
   useEffect(() => {
     if (open) {
       initializeWidget();
-      // Refetch chat data when widget is opened to ensure latest data
       refetchChat();
     }
   }, [open, initializeWidget, refetchChat]);
 
-  // Load existing chat data when chatId is set
+  // Load existing chat data
   useEffect(() => {
     if (chatData?.data && chatId && !isInitialized) {
-      // Type assertion to access messages - we know they exist from the action
       const chatWithMessages = chatData.data as any;
       if (chatWithMessages.messages) {
-        const previousChats: (ChatMessage & {
-          isLoading?: boolean;
-          isStreaming?: boolean;
-          isNewMessage?: boolean;
-        })[] = chatWithMessages.messages.map((message: any) => ({
-          id: `msg-${nanoid()}`,
-          content: message.content,
-          createdAt: message.created_at,
-          role: message.role === "USER" ? "USER" : "ASSISTANT",
-          chatSessionId: message.chat_session_id, // Assuming chat_session_id is available
-          updatedAt: message.updated_at,
-          isLoading: false,
-          isStreaming: false,
-          isNewMessage: false,
-        }));
+        const transformedMessages = transformApiMessagesToUI(
+          chatWithMessages.messages,
+        );
+        const finalMessages =
+          transformedMessages.length > 0
+            ? transformedMessages
+            : [createDefaultGreeting()];
 
-        const finalChats =
-          previousChats.length > 0 ? previousChats : [createDefaultGreeting()];
-        setChats(finalChats);
+        setMessages(finalMessages);
         setIsInitialized(true);
       }
     }
-  }, [chatData, isInitialized, chatId, createDefaultGreeting]);
+  }, [chatData, isInitialized, chatId]);
 
-  // Check for new messages that need streaming
+  // Process new messages for streaming
   useEffect(() => {
     if (isInitialized) {
-      checkForNewMessage();
+      processNewMessages();
     }
-  }, [checkForNewMessage, isInitialized]);
+  }, [processNewMessages, isInitialized]);
 
-  // Animated placeholder effect
-  useEffect(() => {
-    const placeholders = [".", "..", "..."];
-    let idx = 0;
-
-    const interval = setInterval(() => {
-      idx = (idx + 1) % placeholders.length;
-      setAnimatedPlaceholder(placeholders[idx]);
-    }, 500);
-
-    return () => clearInterval(interval);
-  }, [isCreatingChat, isStreaming]);
-
-  // Auto scroll to bottom
-  useEffect(() => {
-    if (isInitialized && chats.length > 0) {
-      chatEndRef.current?.scrollIntoView({
-        behavior: "smooth",
-        block: "end",
-      });
-    }
-  }, [chats, isInitialized]);
-
-  // Computed values
+  // ===== COMPUTED VALUES =====
   const isLoading =
     (chatId && isLoadingChat && !isInitialized) || isDeletingChat;
 
+  // ===== RENDER =====
   return (
     <aside
       className={cn(
-        "border-pro-snow-200 fixed right-0 top-0 flex h-dvh flex-col border-x bg-white transition-all duration-500 ease-in-out",
+        "fixed right-0 top-0 flex h-dvh flex-col border-x bg-background transition-all duration-200 ease-linear",
         open ? "w-[24rem]" : "w-0",
       )}
     >
       {/* Header */}
       <div
         className={cn(
-          "border-pro-snow-200 flex h-16 items-center justify-between border-b px-4 py-3 transition-all duration-500 ease-in-out",
+          "flex h-16 items-center justify-between border-b px-4 py-3 transition-all duration-500 ease-in-out",
           open ? "opacity-100" : "opacity-0",
         )}
       >
         <div className="flex items-center gap-2">
-          <div className="bg-pro-gradient-chat relative flex size-8 shrink-0 grow-0 items-center justify-center rounded-full">
-            <BotIcon color="#fff" className="size-5" />
+          <div className="relative flex size-8 shrink-0 grow-0 items-center justify-center rounded-full bg-foreground">
+            <BotIcon className="size-5 text-background" />
           </div>
           <div className="flex flex-col">
-            <span className="font-logo text-xs font-semibold">
-              AI Assistant
-            </span>
-            <span className="text-xs text-[#6B7280]">by Hey Amara</span>
+            <span className="text-xs font-semibold">AI Assistant</span>
+            <span className="text-xs text-muted-foreground">by Hey Amara</span>
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
-          <button onClick={handleClearChat} disabled={isLoading}>
-            <TrashIcon color="#747474" className="size-5" />
-          </button>
-          <button onClick={() => setOpen(false)}>
-            <XIcon color="#747474" className="size-5" />
-          </button>
+        <div className="flex items-center">
+          <Button
+            type="button"
+            size="icon"
+            variant="ghost"
+            className="h-8 w-8 [&_svg]:size-5"
+            onClick={handleClearChat}
+            disabled={isLoading}
+          >
+            <IconTrash />
+          </Button>
+          <Button
+            type="button"
+            size="icon"
+            variant="ghost"
+            className="h-8 w-8 [&_svg]:size-5"
+            onClick={() => setOpen(false)}
+          >
+            <IconX />
+          </Button>
         </div>
       </div>
 
-      {/* Loading State */}
-      {isLoading && (
-        <div className="flex flex-1 items-center justify-center p-6">
-          <span className="flex size-20 items-center justify-center">
-            <Lottie animationData={blobAnimation} />
-          </span>
-        </div>
-      )}
-
-      {/* Chat Messages using AI Elements */}
+      {/* Chat Interface */}
       <div className="flex flex-1 flex-col overflow-hidden">
         <Conversation className="flex-1">
           <ConversationContent>
-            {chats.map((chat) => (
+            {messages.map((message) => (
               <Message
-                key={chat.id}
-                from={chat.role === "USER" ? "user" : "assistant"}
+                key={message.id}
+                from={message.role === "USER" ? "user" : "assistant"}
               >
-                <MessageContent>
-                  {chat.isLoading ? (
-                    <div className="flex items-center gap-2">
-                      <Loader size={16} />
-                      <span>Thinking{animatedPlaceholder}</span>
-                    </div>
-                  ) : (
-                    <Response>{chat.content}</Response>
-                  )}
-                </MessageContent>
+                {message.isLoading ? (
+                  <div className="flex items-center gap-2">
+                    <Loader size={16} />
+                    <span className="text-sm">Thinking{animatedDots}</span>
+                  </div>
+                ) : (
+                  <MessageContent>
+                    <Response>{message.content}</Response>
+                  </MessageContent>
+                )}
               </Message>
             ))}
-            <div ref={chatEndRef} />
+
+            <div ref={scrollRef} />
           </ConversationContent>
           <ConversationScrollButton />
         </Conversation>
 
-        {/* Input Form using AI Elements */}
+        {/* Loading State */}
+        {isLoading && (
+          <div className="flex h-full w-full items-center justify-center p-6">
+            <span className="flex size-16 items-center justify-center">
+              <Lottie animationData={blobAnimation} />
+            </span>
+          </div>
+        )}
+
+        {/* Input Section */}
         <div className="p-4">
-          <PromptInput onSubmit={form.handleSubmit(onSubmit)}>
+          {/* Suggestions */}
+          <Suggestions>
+            {SUGGESTIONS.map((suggestion) => (
+              <Suggestion
+                key={suggestion}
+                onClick={() => handleSuggestionClick(suggestion)}
+                suggestion={suggestion}
+              />
+            ))}
+          </Suggestions>
+
+          {/* Input Form */}
+          <PromptInput
+            onSubmit={form.handleSubmit(handleFormSubmit)}
+            className="mt-4"
+          >
             <PromptInputTextarea
               ref={textareaRef}
-              placeholder="Type your message..."
-              onFocus={handleFocus}
-              onBlur={handleBlur}
-              onKeyDown={(e) => handleKeyDown(e, form.handleSubmit(onSubmit))}
-              onPaste={handleAutoResize}
-              disabled={isStreaming}
-              value={form.watch("message")}
               onChange={(e) => form.setValue("message", e.target.value)}
+              value={form.watch("message")}
+              onKeyDown={(e) =>
+                handleKeyDown(e, form.handleSubmit(handleFormSubmit))
+              }
+              onPaste={handleTextareaAutoResize}
             />
             <PromptInputToolbar>
+              <PromptInputTools>
+                <PromptInputButton
+                  variant={webSearchEnabled ? "default" : "ghost"}
+                  onClick={() => setWebSearchEnabled(!webSearchEnabled)}
+                >
+                  <GlobeIcon size={16} />
+                  <span>Search</span>
+                </PromptInputButton>
+                <PromptInputModelSelect
+                  onValueChange={setSelectedModel}
+                  value={selectedModel}
+                >
+                  <PromptInputModelSelectTrigger>
+                    <PromptInputModelSelectValue />
+                  </PromptInputModelSelectTrigger>
+                  <PromptInputModelSelectContent>
+                    {MODELS.map((model) => (
+                      <PromptInputModelSelectItem
+                        key={model.id}
+                        value={model.id}
+                      >
+                        {model.name}
+                      </PromptInputModelSelectItem>
+                    ))}
+                  </PromptInputModelSelectContent>
+                </PromptInputModelSelect>
+              </PromptInputTools>
               <PromptInputSubmit
-                disabled={!form.watch("message") || isStreaming}
+                disabled={!form.watch("message")}
                 status={isStreaming ? "streaming" : undefined}
               />
             </PromptInputToolbar>

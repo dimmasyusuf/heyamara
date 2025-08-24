@@ -16,7 +16,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <AppSidebar />
       <SidebarInset
         className={cn(
-          "transition-all duration-500 ease-in-out",
+          "transition-all duration-500 ease-linear",
           open ? "mr-[24rem]" : "mr-0",
         )}
       >

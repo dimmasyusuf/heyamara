@@ -6,6 +6,7 @@ import WidgetPrompt from "@/helper/prompt/widget";
 import { Response } from "@/helper/response";
 import BytePlus from "@/lib/byteplus";
 import { prisma } from "@/lib/prisma";
+import { ChatMessageType, ChatMessageRole } from "@prisma/client";
 import { BytePlusMessage } from "@/types/byteplus";
 import {
   CreateChatSessionRequest,
@@ -16,6 +17,7 @@ import {
   StreamChatRequest,
 } from "@/types/chat";
 import { jsonrepair } from "jsonrepair";
+import { revalidatePath } from "next/cache";
 
 export const getChatSessions = async (params?: GetChatSessionsParams) => {
   const { search, offset, limit } = params || {};
@@ -162,7 +164,7 @@ export const streamChat = async (request: StreamChatRequest) => {
     });
   }
 
-  const { message, chat_id, type } = request;
+  const { message, chat_id, type, candidate_id } = request;
 
   if (!chat_id) {
     return Response({
@@ -171,42 +173,78 @@ export const streamChat = async (request: StreamChatRequest) => {
     });
   }
 
-  const prompt = widget.candidate(message);
+  if (type === ChatMessageType.RESUME) {
+    const resume = await prisma.resume.findUnique({
+      where: { candidateId: candidate_id },
+      include: {
+        analysis: true,
+      },
+    });
 
-  const messages = [
-    {
-      role: "system",
-      content: prompt,
-    },
-    {
-      role: "user",
-      content: message,
-    },
-  ] as BytePlusMessage[];
+    await prisma.chatMessage.create({
+      data: {
+        type: ChatMessageType.RESUME,
+        role: ChatMessageRole.USER,
+        content: message,
+        chatSessionId: chat_id,
+      },
+    });
 
-  await prisma.chatMessage.create({
-    data: {
-      type: type || "CANDIDATE",
-      role: "USER",
-      content: message,
-      chatSessionId: chat_id,
-    },
-  });
+    if (!resume) {
+      return Response({
+        status: 404,
+        message: "Resume not found",
+      });
+    }
 
-  const result = await byteplus.stream({
-    model: "seed-1-6-250615",
-    messages: messages,
-  });
+    const prompt = widget.resume(message, resume.analysis?.analysis || "");
 
-  // Create assistant message
-  await prisma.chatMessage.create({
-    data: {
-      type: type || "CANDIDATE",
-      role: "ASSISTANT",
-      content: result,
-      chatSessionId: chat_id,
-    },
-  });
+    const messages = [
+      {
+        role: "system",
+        content: prompt,
+      },
+      {
+        role: "user",
+        content: message,
+      },
+    ] as BytePlusMessage[];
 
-  return result;
+    const findCommand = await byteplus.chat({
+      model: "seed-1-6-250615",
+      messages: messages,
+    });
+
+    const content = findCommand.choices[0].message.content;
+
+    const json = JSON.parse(jsonrepair(content)) || {};
+
+    const jsonCommand = json.command as string;
+    const jsonMessage = json.message as string;
+    const jsonResponse = json.response as string;
+
+    await prisma.chatMessage.create({
+      data: {
+        type: ChatMessageType.RESUME,
+        role: ChatMessageRole.ASSISTANT,
+        content: jsonMessage,
+        chatSessionId: chat_id,
+      },
+    });
+
+    if (jsonCommand === "action") {
+      await prisma.resumeAnalysis.update({
+        where: { resumeId: resume.id },
+        data: {
+          analysis: jsonResponse,
+        },
+      });
+
+      revalidatePath(`/candidates/${candidate_id}/resume`);
+
+      return jsonMessage;
+    }
+
+    return jsonMessage;
+  }
 };
