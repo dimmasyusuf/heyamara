@@ -19,9 +19,9 @@ export default async function CandidateDetailLayout({
       queryKey: CANDIDATE_KEY.GET_CANDIDATES({
         search: "",
         limit: 10,
-        offset: 0,
+        offset: 1,
       }),
-      queryFn: () => getCandidates({ search: "", limit: 10, offset: 0 }),
+      queryFn: () => getCandidates({ search: "", limit: 10, offset: 1 }),
     }),
   ]);
 
