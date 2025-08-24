@@ -63,7 +63,7 @@ const formSchema = z.object({
 export default function CreateCandidateDialog() {
   const [open, setOpen] = useState(false);
 
-  const { mutateAsync } = useCreateCandidate();
+  const { mutateAsync, isPending } = useCreateCandidate();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -232,12 +232,21 @@ export default function CreateCandidateDialog() {
 
             <DialogFooter>
               <DialogClose asChild>
-                <Button type="button" variant="outline" className="h-12 w-full">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="h-12 w-full"
+                  disabled={isPending}
+                >
                   Cancel
                 </Button>
               </DialogClose>
 
-              <Button type="submit" className="h-12 w-full">
+              <Button
+                type="submit"
+                className="h-12 w-full"
+                disabled={isPending}
+              >
                 Continue
               </Button>
             </DialogFooter>

@@ -43,7 +43,7 @@ export default function DeleteCandidateDialog({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogContent className="max-w-md">
-        <DialogHeader className="border-none">
+        <DialogHeader>
           <DialogTitle>Delete Candidate</DialogTitle>
           <DialogDescription>
             Are you sure you want to delete this candidate?
@@ -51,13 +51,14 @@ export default function DeleteCandidateDialog({
             This action cannot be undone.
           </DialogDescription>
         </DialogHeader>
-        <DialogFooter className="border-none pt-0">
+        <DialogFooter className="border-none">
           <DialogClose asChild>
             <Button
               type="button"
               variant="outline"
-              className="w-full"
+              className="h-12 w-full"
               size="lg"
+              disabled={isPending}
             >
               Cancel
             </Button>
@@ -67,7 +68,7 @@ export default function DeleteCandidateDialog({
             type="button"
             size="lg"
             variant="destructive"
-            className="w-full"
+            className="h-12 w-full"
             disabled={isPending}
             onClick={onSubmit}
           >
