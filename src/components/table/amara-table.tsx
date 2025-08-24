@@ -497,7 +497,7 @@ export default function AmaraTable({
 
         {/* Right side - Pagination */}
         <div className="flex items-center gap-6">
-          {!isLoading && (
+          {!isLoading && total > 0 && (
             <span className="text-pro-gray-200 whitespace-nowrap text-sm">
               {`${start}-${end} of ${total}`}
             </span>
@@ -507,7 +507,7 @@ export default function AmaraTable({
             {/* First page */}
             <button
               type="button"
-              disabled={currentPage === 1}
+              disabled={!pagination?.total_pages || currentPage === 1}
               onClick={() => handlePageChange(1)}
               className="flex h-10 w-10 items-center justify-center rounded-lg text-sm hover:border disabled:cursor-not-allowed disabled:bg-secondary [&_svg]:size-4"
             >
@@ -517,7 +517,7 @@ export default function AmaraTable({
             {/* Previous page */}
             <button
               type="button"
-              disabled={currentPage === 1}
+              disabled={!pagination?.total_pages || currentPage === 1}
               onClick={() => handlePageChange(currentPage - 1)}
               className="flex h-10 w-10 items-center justify-center rounded-lg text-sm hover:border disabled:cursor-not-allowed disabled:bg-secondary [&_svg]:size-4"
             >
@@ -553,7 +553,10 @@ export default function AmaraTable({
             {/* Next page */}
             <button
               type="button"
-              disabled={currentPage === pagination?.total_pages}
+              disabled={
+                !pagination?.total_pages ||
+                currentPage >= pagination.total_pages
+              }
               onClick={() => handlePageChange(currentPage + 1)}
               className="flex h-10 w-10 items-center justify-center rounded-lg text-sm hover:border disabled:cursor-not-allowed disabled:bg-secondary [&_svg]:size-4"
             >
@@ -563,7 +566,10 @@ export default function AmaraTable({
             {/* Last page */}
             <button
               type="button"
-              disabled={currentPage === pagination?.total_pages}
+              disabled={
+                !pagination?.total_pages ||
+                currentPage >= pagination.total_pages
+              }
               onClick={() => handlePageChange(pagination?.total_pages || 1)}
               className="flex h-10 w-10 items-center justify-center rounded-lg text-sm hover:border disabled:cursor-not-allowed disabled:bg-secondary [&_svg]:size-4"
             >
