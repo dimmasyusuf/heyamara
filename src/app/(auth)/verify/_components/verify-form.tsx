@@ -14,9 +14,12 @@ export default function VerifyForm() {
   const [countdown, setCountdown] = useState(0);
   const [isResending, setIsResending] = useState(false);
 
-  const email = sessionStorage.getItem("email");
+  const email =
+    typeof window !== "undefined" ? sessionStorage.getItem("email") : null;
 
   useEffect(() => {
+    if (typeof window === "undefined") return;
+
     const savedEndTime = sessionStorage.getItem("resend");
 
     if (savedEndTime) {
@@ -51,7 +54,7 @@ export default function VerifyForm() {
   };
 
   const handleResend = () => {
-    if (countdown > 0) return;
+    if (countdown > 0 || typeof window === "undefined") return;
 
     setIsResending(true);
     const endTime = Date.now() + 30 * 1000;
@@ -68,10 +71,10 @@ export default function VerifyForm() {
       </Link>
 
       <div className="flex flex-col items-center gap-4">
-        <h1 className="text-3xl">You're ready to go!</h1>
+        <h1 className="text-3xl">You&apos;re ready to go!</h1>
         <p className="text-center text-sm">
-          We've sent you an email with a verification code. Please check your
-          inbox and enter the code to continue.
+          We&apos;ve sent you an email with a verification code. Please check
+          your inbox and enter the code to continue.
         </p>
       </div>
 

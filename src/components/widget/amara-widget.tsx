@@ -1,7 +1,8 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import { BotIcon, GlobeIcon, TrashIcon, XIcon } from "lucide-react";
+import { BotIcon, GlobeIcon } from "lucide-react";
 import Cookies from "js-cookie";
 import { nanoid } from "nanoid";
 import { useForm } from "react-hook-form";
@@ -149,7 +150,7 @@ function useAutoScroll(shouldScroll: boolean, dependency: any[]) {
         block: "end",
       });
     }
-  }, dependency);
+  }, [shouldScroll, dependency]);
 
   return scrollRef;
 }
@@ -269,8 +270,7 @@ export default function AmaraWidget() {
     enabled: !!chatId,
   });
 
-  const { mutateAsync: createChat, isPending: isCreatingChat } =
-    useCreateChatSession();
+  const { mutateAsync: createChat } = useCreateChatSession();
   const { mutateAsync: deleteChat, isPending: isDeletingChat } =
     useDeleteChatSession();
 

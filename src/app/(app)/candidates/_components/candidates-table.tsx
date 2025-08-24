@@ -16,9 +16,10 @@ import { useGetCandidates } from "@/services/candidate/service";
 import { Candidate } from "@prisma/client";
 import { format } from "date-fns";
 import CandidatesTableAction from "./candidates-table-action";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import DeleteCandidateDialog from "./delete-candidate-dialog";
 import { useState } from "react";
+import useGetParams from "@/hooks/use-get-params";
 
 export default function CandidatesTable() {
   const router = useRouter();
@@ -27,10 +28,7 @@ export default function CandidatesTable() {
     null,
   );
 
-  const searchParams = useSearchParams();
-  const search = searchParams.get("search") || "";
-  const limit = parseInt(searchParams.get("limit") || "10");
-  const offset = parseInt(searchParams.get("page") || "1");
+  const { search, limit, offset } = useGetParams();
 
   const { data, isLoading } = useGetCandidates({
     search,
@@ -98,7 +96,6 @@ export default function CandidatesTable() {
           <CandidatesTableAction
             candidate={data}
             onResume={handleResume}
-            onEdit={handleEdit}
             onDelete={handleDelete}
           />
         );
@@ -108,14 +105,6 @@ export default function CandidatesTable() {
 
   const handleResume = (candidate: Candidate) => {
     router.push(`/candidates/${candidate.id}/resume`);
-  };
-
-  const handleView = (candidate: Candidate) => {
-    router.push(`/candidates/${candidate.id}`);
-  };
-
-  const handleEdit = (candidate: Candidate) => {
-    router.push(`/candidates/${candidate.id}/edit`);
   };
 
   const handleDelete = (candidate: Candidate) => {

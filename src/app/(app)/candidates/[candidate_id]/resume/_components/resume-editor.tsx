@@ -3,7 +3,7 @@ import { EmptyState } from "@/components/state";
 import { useAnalyzeResume } from "@/services/candidate";
 import { useCandidateStore } from "@/stores/candidate";
 import { AmaraSpinner } from "@/components/spinner";
-import { Response } from "@/components/ai-elements/response";
+
 import { toast } from "sonner";
 import { useParams } from "next/navigation";
 import { GetCandidateResponse } from "@/types/candidate";

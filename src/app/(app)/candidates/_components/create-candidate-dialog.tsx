@@ -63,7 +63,7 @@ const formSchema = z.object({
 export default function CreateCandidateDialog() {
   const [open, setOpen] = useState(false);
 
-  const { mutateAsync, isPending } = useCreateCandidate();
+  const { mutateAsync } = useCreateCandidate();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),

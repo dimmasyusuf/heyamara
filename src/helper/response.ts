@@ -5,7 +5,7 @@ export const Response = <
     status: number;
     message: string;
     error?: string;
-    data?: any;
+    data?: any; // eslint-disable-line @typescript-eslint/no-explicit-any
     pagination?: Pagination;
   },
 >({

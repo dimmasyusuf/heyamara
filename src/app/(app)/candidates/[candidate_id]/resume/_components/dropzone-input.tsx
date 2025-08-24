@@ -7,7 +7,7 @@ import type {
   FileWithPath,
 } from "react-dropzone";
 
-import { FileTextIcon, PlusIcon, UploadIcon } from "lucide-react";
+import { FileTextIcon, PlusIcon } from "lucide-react";
 import { toast } from "sonner";
 
 import { cn, formatBytes } from "@/lib/utils";
@@ -79,7 +79,9 @@ export default function DropzoneInput({
 
       <div className="flex flex-col items-center gap-2">
         <h6 className="text-base font-semibold">Upload Original CV</h6>
-        <p className="text-sm">Upload the candidate's original CV document</p>
+        <p className="text-sm">
+          Upload the candidate&apos;s original CV document
+        </p>
         <Button size="sm" className="w-fit">
           <PlusIcon />
           Choose File

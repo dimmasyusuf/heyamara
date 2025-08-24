@@ -1,7 +1,7 @@
 "use client";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { useEffect, useMemo, useState, useCallback } from "react";
+import { useEffect, useMemo, useState, useCallback, useRef } from "react";
 
 import { useRouter, useSearchParams } from "next/navigation";
 
@@ -64,7 +64,7 @@ export default function AmaraTable({
   // URL parameter constants
   const sortParam = "sort";
   const orderParam = "order";
-  const offsetParam = "page";
+  const offsetParam = "offset";
   const limitParam = "limit";
   const searchParam = "search";
 
@@ -96,13 +96,15 @@ export default function AmaraTable({
     searchParams.get(searchParam) || "",
   );
 
+  const searchTimeoutRef = useRef<NodeJS.Timeout>();
+
   const keys = useMemo(
     () => Array.from({ length: columns.length }, () => nanoid()),
     [columns.length],
   );
 
   // Dynamic rows per page options based on total data
-  const getDynamicRowsPerPageOptions = () => {
+  const getDynamicRowsPerPageOptions = useCallback(() => {
     const baseOptions = [1, 5, 10, 25, 50];
 
     // Always return base options if no pagination or total is 0
@@ -122,9 +124,27 @@ export default function AmaraTable({
     return filteredOptions.length > 0
       ? filteredOptions
       : baseOptions.slice(0, 2); // [1, 5]
-  };
+  }, [pagination?.total]);
 
   const rowsPerPageOptions = getDynamicRowsPerPageOptions();
+
+  // Update URL search params
+  const updateSearchParams = useCallback(
+    (updates: Record<string, string | null>) => {
+      const params = new URLSearchParams(searchParams);
+
+      Object.entries(updates).forEach(([key, value]) => {
+        if (value !== null && value !== "") {
+          params.set(key, value);
+        } else {
+          params.delete(key);
+        }
+      });
+
+      router.replace(`?${params.toString()}`, { scroll: false });
+    },
+    [searchParams, router],
+  );
 
   // Sync select value with rowsPerPage - this ensures the select always shows the correct value
   useEffect(() => {
@@ -144,7 +164,13 @@ export default function AmaraTable({
       // Set select value to current rowsPerPage if it's valid
       setSelectValue(rowsPerPage.toString());
     }
-  }, [rowsPerPage, pagination?.total]);
+  }, [
+    rowsPerPage,
+    pagination?.total,
+    updateSearchParams,
+    limitParam,
+    getDynamicRowsPerPageOptions,
+  ]);
 
   // Update local state when pagination prop changes or URL params change
   useEffect(() => {
@@ -177,21 +203,6 @@ export default function AmaraTable({
       setSearchQuery(urlSearch);
     }
   }, [pagination, searchParams]);
-
-  // Update URL search params
-  const updateSearchParams = (updates: Record<string, string | null>) => {
-    const params = new URLSearchParams(searchParams);
-
-    Object.entries(updates).forEach(([key, value]) => {
-      if (value !== null && value !== "") {
-        params.set(key, value);
-      } else {
-        params.delete(key);
-      }
-    });
-
-    router.replace(`?${params.toString()}`, { scroll: false });
-  };
 
   const handleSort = (column: string) => {
     let newDirection: "asc" | "desc" = "asc";
@@ -231,28 +242,30 @@ export default function AmaraTable({
     });
   };
 
-  const handleSearch = (query: string) => {
-    setSearchQuery(query);
-    setCurrentPage(1); // Reset to first page when searching
+  const handleSearch = useCallback(
+    (query: string) => {
+      setSearchQuery(query);
+      setCurrentPage(1); // Reset to first page when searching
 
-    updateSearchParams({
-      [searchParam]: query || null,
-      [offsetParam]: "1",
-    });
-  };
+      updateSearchParams({
+        [searchParam]: query || null,
+        [offsetParam]: "1",
+      });
+    },
+    [updateSearchParams, searchParam, offsetParam],
+  );
 
   // Debounced search to avoid too many API calls
   const debouncedSearch = useCallback(
-    (() => {
-      let timeoutId: NodeJS.Timeout;
-      return (query: string) => {
-        clearTimeout(timeoutId);
-        timeoutId = setTimeout(() => {
-          handleSearch(query);
-        }, 500); // 500ms delay
-      };
-    })(),
-    [],
+    (query: string) => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+      }
+      searchTimeoutRef.current = setTimeout(() => {
+        handleSearch(query);
+      }, 500); // 500ms delay
+    },
+    [handleSearch],
   );
 
   // Utility to get nested value by path (e.g., 'source_file.size')

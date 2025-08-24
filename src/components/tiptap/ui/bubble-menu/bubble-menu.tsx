@@ -8,7 +8,7 @@ import { MarkButton } from "../mark-button";
 import "./bubble-menu.scss";
 
 interface BubbleMenuProps {
-  editor: any;
+  editor: any; // eslint-disable-line @typescript-eslint/no-explicit-any
 }
 
 export function BubbleMenuComponent({ editor }: BubbleMenuProps) {

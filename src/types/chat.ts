@@ -1,4 +1,4 @@
-import { ChatMessage, ChatMessageType, ChatSession } from "@prisma/client";
+import { ChatMessageType, ChatSession } from "@prisma/client";
 import { Response } from "./api";
 
 export interface GetChatSessionsParams {

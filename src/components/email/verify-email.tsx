@@ -69,8 +69,8 @@ export default function VerifyEmail({ url, email }: EmailTemplateProps) {
               </Section>
 
               <Text className="my-0 font-sans text-base leading-relaxed text-gray-600">
-                If you didn't request this email, you can safely ignore it. Your
-                account will remain secure.
+                If you didn&apos;t request this email, you can safely ignore it.
+                Your account will remain secure.
               </Text>
             </Section>
 

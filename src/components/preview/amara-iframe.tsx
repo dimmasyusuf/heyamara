@@ -46,7 +46,7 @@ export default function AmaraIframe({
           <div className="flex flex-col items-center gap-3">
             <FileText className="h-12 w-12 text-muted-foreground" />
             <p className="text-sm text-muted-foreground">
-              Your browser doesn't support PDF preview.
+              Your browser doesn&apos;t support PDF preview.
             </p>
             <a
               href={src}
