@@ -1,14 +1,24 @@
-import { Response as ResponseType } from "@/types/api";
+import { Pagination } from "@/types/api";
 
-export const Response = <T = any>({
+export const Response = <
+  T extends {
+    status: number;
+    message: string;
+    error?: string;
+    data?: any;
+    pagination?: Pagination;
+  },
+>({
   status,
   message,
+  error,
   data,
   pagination,
-}: ResponseType<T>) => {
+}: T) => {
   return {
     status,
     message,
+    error,
     data,
     pagination,
   };

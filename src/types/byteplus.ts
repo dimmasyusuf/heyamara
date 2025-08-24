@@ -1,6 +1,37 @@
+export interface BytePlusTool {
+  type: "function";
+  function: {
+    name: string;
+    description: string;
+    parameters: {
+      type: "object";
+      properties: {
+        [key: string]: {
+          type: "string" | "number" | "boolean" | "array" | "object";
+          description: string;
+        };
+      };
+      required: string[];
+    };
+  };
+}
+
+export interface BytePlusMessageContent {
+  type: "text" | "image_url" | "video_url";
+  text?: string;
+  image_url?: string;
+  video_url?: string;
+}
+
+export interface BytePlusMessage {
+  role: "user" | "system" | "assistant" | "tool";
+  content: string | BytePlusMessageContent;
+}
+
 export interface BytePlusProps {
   model: string;
-  messages: { role: "system" | "user"; content: string }[];
+  messages: BytePlusMessage[];
+  stream?: boolean;
 }
 
 export interface BytePlusConfig {

@@ -8,7 +8,7 @@ interface AmaraSpinnerProps extends React.SVGProps<SVGSVGElement> {
 }
 
 const AmaraSpinner = React.memo(
-  ({ className, color = "#9A6AFB", ...props }: AmaraSpinnerProps) => {
+  ({ className, color = "#171717", ...props }: AmaraSpinnerProps) => {
     return (
       <svg
         width="24"

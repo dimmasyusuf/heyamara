@@ -30,6 +30,7 @@ import { cn } from "@/lib/utils";
 
 import { AmaraSpinner } from "@/components/spinner";
 import { Input } from "../ui/input";
+import { Pagination } from "@/types/api";
 
 export interface AmaraTableColumn {
   key: string;
@@ -45,12 +46,7 @@ interface AmaraTableProps {
   columns: AmaraTableColumn[];
   data: any[];
   isLoading?: boolean;
-  pagination: {
-    page: number;
-    per_page: number;
-    total: number;
-    total_pages: number;
-  };
+  pagination?: Pagination;
   actions?: React.ReactNode;
 }
 
@@ -431,7 +427,7 @@ export default function AmaraTable({
             {/* Next page */}
             <button
               type="button"
-              disabled={currentPage === pagination.total_pages}
+              disabled={currentPage === pagination?.total_pages}
               onClick={() => handlePageChange(currentPage + 1)}
               className="border-pro-snow-200 hover:bg-pro-snow-100 disabled:bg-pro-snow-100 flex h-10 w-10 items-center justify-center rounded-lg border text-sm [&_svg]:size-4"
             >
@@ -441,8 +437,8 @@ export default function AmaraTable({
             {/* Last page */}
             <button
               type="button"
-              disabled={currentPage === pagination.total_pages}
-              onClick={() => handlePageChange(pagination.total_pages)}
+              disabled={currentPage === pagination?.total_pages}
+              onClick={() => handlePageChange(pagination?.total_pages || 1)}
               className="border-pro-snow-200 hover:bg-pro-snow-100 disabled:bg-pro-snow-100 flex h-10 w-10 items-center justify-center rounded-lg border text-sm [&_svg]:size-4"
             >
               <ChevronsRightIcon />

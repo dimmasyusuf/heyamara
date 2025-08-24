@@ -1,29 +1,44 @@
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, UseQueryOptions } from "@tanstack/react-query";
 
 import {
   analyzeResume,
-  CreateCandidateRequest,
   createCandidate,
   deleteCandidate,
   getCandidate,
   getCandidates,
   updateCandidate,
-  UpdateCandidateRequest,
   uploadResume,
 } from "@/actions/candidate";
-import { CANDIDATE_KEY } from "./key";
-import { AnalyzeResumeRequest } from "@/types/candidate";
 
-export const useGetCandidates = () =>
+import {
+  AnalyzeResumeRequest,
+  CreateCandidateRequest,
+  GetCandidateResponse,
+  GetCandidatesParams,
+  GetCandidatesResponse,
+  UpdateCandidateRequest,
+} from "@/types/candidate";
+
+import { CANDIDATE_KEY } from "./key";
+
+export const useGetCandidates = (
+  params?: GetCandidatesParams,
+  options?: UseQueryOptions<GetCandidatesResponse>,
+) =>
   useQuery({
-    queryKey: CANDIDATE_KEY.GET_CANDIDATES,
-    queryFn: getCandidates,
+    queryKey: CANDIDATE_KEY.GET_CANDIDATES(params),
+    queryFn: () => getCandidates(params),
+    ...options,
   });
 
-export const useGetCandidate = (candidate_id: string) =>
+export const useGetCandidate = (
+  candidate_id: string,
+  options?: UseQueryOptions<GetCandidateResponse>,
+) =>
   useQuery({
     queryKey: CANDIDATE_KEY.GET_CANDIDATE(candidate_id),
     queryFn: () => getCandidate(candidate_id),
+    ...options,
   });
 
 export const useCreateCandidate = () =>

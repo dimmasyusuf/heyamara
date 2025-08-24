@@ -1,17 +1,30 @@
+"use client";
+
 import { AmaraTable, AmaraTableColumn } from "@/components/table";
 import { Button } from "@/components/ui/button";
 import {
+  IconBriefcase,
   IconCalendar,
   IconClock,
   IconCurrencyDollar,
+  IconMapPin,
   IconNotes,
-  IconPlus,
   IconStar,
   IconUser,
 } from "@tabler/icons-react";
 import Link from "next/link";
+import CreateCandidateDialog from "./create-candidate-dialog";
+import { useGetCandidates } from "@/services/candidate/service";
+import { Candidate } from "@prisma/client";
+import { format } from "date-fns";
+import CandidatesTableAction from "./candidates-table-action";
+import { useRouter } from "next/navigation";
 
 export default function CandidatesTable() {
+  const router = useRouter();
+
+  const { data, isLoading } = useGetCandidates();
+
   const tableColumns: AmaraTableColumn[] = [
     {
       key: "name",
@@ -20,10 +33,25 @@ export default function CandidatesTable() {
       sortable: true,
     },
     {
+      key: "role",
+      icon: <IconBriefcase />,
+      header: "Role",
+      sortable: true,
+    },
+    {
+      key: "location",
+      icon: <IconMapPin />,
+      header: "Location",
+      sortable: true,
+    },
+    {
       key: "date",
       icon: <IconCalendar />,
       header: "Date",
       sortable: true,
+      cell: (data: Candidate) => {
+        return <div>{format(data.date, "MM/dd/yyyy")}</div>;
+      },
     },
     {
       key: "pay",
@@ -52,85 +80,39 @@ export default function CandidatesTable() {
     {
       key: "",
       header: "",
+      cell: (data: Candidate) => {
+        return (
+          <CandidatesTableAction
+            candidate={data}
+            onResume={handleResume}
+            onEdit={handleEdit}
+            onDelete={handleDelete}
+          />
+        );
+      },
     },
   ];
 
-  const tableData = [
-    {
-      name: "John Doe",
-      date: "2021-01-01",
-      pay: "$100",
-      notes: "Lorem ipsum dolor sit amet",
-      status: "Active",
-      rating: 4.5,
-    },
-    {
-      name: "Jane Doe",
-      date: "2021-01-02",
-      pay: "$200",
-      notes: "Lorem ipsum dolor sit amet",
-      status: "Inactive",
-      rating: 3.5,
-    },
-    {
-      name: "John Doe",
-      date: "2021-01-01",
-      pay: "$100",
-      notes: "Lorem ipsum dolor sit amet",
-      status: "Active",
-      rating: 4.5,
-    },
-    {
-      name: "Jane Doe",
-      date: "2021-01-02",
-      pay: "$200",
-      notes: "Lorem ipsum dolor sit amet",
-      status: "Inactive",
-      rating: 3.5,
-    },
-    {
-      name: "John Doe",
-      date: "2021-01-01",
-      pay: "$100",
-      notes: "Lorem ipsum dolor sit amet",
-      status: "Active",
-      rating: 4.5,
-    },
-    {
-      name: "Jane Doe",
-      date: "2021-01-02",
-      pay: "$200",
-      notes: "Lorem ipsum dolor sit amet",
-      status: "Inactive",
-      rating: 3.5,
-    },
-    {
-      name: "John Doe",
-      date: "2021-01-01",
-      pay: "$100",
-      notes: "Lorem ipsum dolor sit amet",
-      status: "Active",
-      rating: 4.5,
-    },
-    {
-      name: "Jane Doe",
-      date: "2021-01-02",
-      pay: "$200",
-      notes: "Lorem ipsum dolor sit amet",
-      status: "Inactive",
-      rating: 3.5,
-    },
-  ];
+  const handleResume = (candidate: Candidate) => {
+    router.push(`/candidates/${candidate.id}/resume`);
+  };
 
-  const tablePagination = {
-    page: 1,
-    per_page: 10,
-    total: 10,
-    total_pages: 1,
+  const handleView = (candidate: Candidate) => {
+    router.push(`/candidates/${candidate.id}`);
+  };
+
+  const handleEdit = (candidate: Candidate) => {
+    router.push(`/candidates/${candidate.id}/edit`);
+  };
+
+  const handleDelete = (candidate: Candidate) => {
+    console.log(candidate);
   };
 
   const tableActions = (
     <div className="flex items-center gap-2">
+      <CreateCandidateDialog />
+
       <Button asChild>
         <Link href="/candidates/create">First</Link>
       </Button>
@@ -143,9 +125,9 @@ export default function CandidatesTable() {
     <AmaraTable
       id="candidates"
       columns={tableColumns}
-      data={[]}
-      pagination={tablePagination}
-      isLoading={false}
+      data={data?.data || []}
+      pagination={data?.pagination}
+      isLoading={isLoading}
       actions={tableActions}
     />
   );

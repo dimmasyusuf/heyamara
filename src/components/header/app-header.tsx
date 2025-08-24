@@ -1,3 +1,5 @@
+"use client";
+
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -9,11 +11,12 @@ import {
 import { Separator } from "@/components/ui/separator";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import React from "react";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { IconBell, IconMessage } from "@tabler/icons-react";
+import { IconBell, IconBrain, IconMessage } from "@tabler/icons-react";
 import UserPopover from "./user-popover";
 import Link from "next/link";
+import { useWidgetStore } from "@/stores/widget";
+import { useParams, usePathname } from "next/navigation";
 
 interface AppHeaderProps {
   breadcrumb?: {
@@ -22,6 +25,13 @@ interface AppHeaderProps {
   }[];
 }
 export default function AppHeader({ breadcrumb }: AppHeaderProps) {
+  const { candidate_id } = useParams<{ candidate_id: string }>();
+  const pathName = usePathname();
+
+  const { open, setOpen } = useWidgetStore();
+
+  const showAskAI = pathName.startsWith(`/candidates/${candidate_id}/resume`);
+
   return (
     <header className="group-has-data-[collapsible=icon]/sidebar-wrapper:h-12 flex h-16 shrink-0 items-center gap-2 border-b px-4 transition-[width,height] ease-linear">
       <div className="flex w-full items-center gap-2">
@@ -53,6 +63,18 @@ export default function AppHeader({ breadcrumb }: AppHeaderProps) {
         </Breadcrumb>
 
         <div className="ml-auto flex items-center gap-4">
+          {showAskAI && (
+            <Button
+              type="button"
+              variant="outline"
+              className="[&_svg]:size-5"
+              onClick={() => setOpen(!open)}
+            >
+              <IconBrain />
+              Ask AI
+            </Button>
+          )}
+
           <Button
             type="button"
             size="icon"

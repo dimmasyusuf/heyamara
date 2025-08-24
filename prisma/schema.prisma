@@ -19,8 +19,9 @@ model User {
     // Optional for WebAuthn support
     Authenticator Authenticator[]
 
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
+    createdAt   DateTime      @default(now())
+    updatedAt   DateTime      @updatedAt
+    ChatSession ChatSession[]
 }
 
 model Account {
@@ -79,36 +80,84 @@ model Authenticator {
 }
 
 model Candidate {
-    id          String          @id @default(cuid())
-    name        String
-    jobTitle    String?         @map("job_title")
-    jobLocation String?         @map("job_location")
-    payRate     Int             @map("pay_rate")
-    payType     PayType         @map("pay_type")
-    notes       String?
-    status      CandidateStatus
-    rating      Int
-    createdAt   DateTime        @default(now()) @map("created_at")
-    updatedAt   DateTime        @updatedAt @map("updated_at")
-    resumes     Resume[]
+    id        String          @id @default(cuid())
+    name      String
+    notes     String?
+    status    CandidateStatus @default(SUBMITTED)
+    rating    Int?
+    createdAt DateTime        @default(now()) @map("created_at")
+    updatedAt DateTime        @updatedAt @map("updated_at")
+    date      DateTime
+    location  String
+    role      String
+    payRate   Int?
+    payType   PayType?
+    resume    Resume?
 }
 
 model Resume {
-    id          String    @id @default(cuid())
-    candidateId String    @map("candidate_id")
-    fileName    String    @map("file_name")
-    filePath    String    @map("file_path")
-    bucketName  String    @map("bucket_name")
-    fileSize    Int       @map("file_size")
-    mimeType    String    @map("mime_type")
-    url         String    @map("url")
-    createdAt   DateTime  @default(now()) @map("created_at")
-    updatedAt   DateTime  @updatedAt @map("updated_at")
-    candidate   Candidate @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+    id          String          @id @default(cuid())
+    candidateId String          @unique @map("candidate_id")
+    bucketName  String          @map("bucket_name")
+    fileId      String          @map("file_id")
+    path        String          @map("path")
+    fullPath    String          @map("full_path")
+    fileName    String          @map("file_name")
+    fileSize    Int             @map("file_size")
+    mimeType    String          @map("mime_type")
+    createdAt   DateTime        @default(now()) @map("created_at")
+    updatedAt   DateTime        @updatedAt @map("updated_at")
+    resumeType  ResumeType      @default(DOCUMENT) @map("resume_type")
+    candidate   Candidate       @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+    analysis    ResumeAnalysis?
 }
 
-/// *
-/// * ENUMS
+model ResumeAnalysis {
+    id        String         @id @default(cuid())
+    resumeId  String         @unique @map("resume_id")
+    analysis  String         @map("analysis")
+    status    AnalysisStatus @default(NOT_STARTED) @map("status")
+    progress  Int            @default(0) @map("progress")
+    summary   String?        @map("summary")
+    keywords  String?        @map("keywords")
+    score     Float?         @map("score")
+    createdAt DateTime       @default(now()) @map("created_at")
+    updatedAt DateTime       @updatedAt @map("updated_at")
+    resume    Resume         @relation(fields: [resumeId], references: [id], onDelete: Cascade)
+}
+
+model ChatSession {
+    id          String   @id @default(cuid())
+    userId      String   @map("user_id")
+    title       String
+    description String
+    createdAt   DateTime @default(now()) @map("created_at")
+    updatedAt   DateTime @updatedAt @map("updated_at")
+
+    messages ChatMessage[]
+    user     User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model ChatMessage {
+    id            String          @id @default(cuid())
+    content       String
+    chatSessionId String          @map("chat_session_id")
+    createdAt     DateTime        @default(now()) @map("created_at")
+    updatedAt     DateTime        @updatedAt @map("updated_at")
+    type          ChatMessageType @default(CANDIDATE)
+    role          ChatMessageRole @default(USER)
+    chatSession   ChatSession     @relation(fields: [chatSessionId], references: [id], onDelete: Cascade)
+}
+
+enum ChatMessageRole {
+    USER
+    ASSISTANT
+}
+
+enum ChatMessageType {
+    CANDIDATE
+}
+
 enum CandidateStatus {
     ACTIVE
     INTERVIEWING
@@ -120,6 +169,22 @@ enum CandidateStatus {
     PLACED
     OFFER
     SCREENING
+}
+
+enum ResumeType {
+    DOCUMENT
+    VIDEO
+}
+
+enum AnalysisStatus {
+    NOT_STARTED
+    UPLOADED
+    QUEUED
+    IN_PROGRESS
+    SUCCEEDED
+    PARTIAL
+    FAILED
+    CANCELLED
 }
 
 enum PayType {

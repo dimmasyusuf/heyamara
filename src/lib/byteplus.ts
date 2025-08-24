@@ -36,9 +36,6 @@ export default class BytePlus {
     try {
       const response = await fetch(this.config.apiUrl, options);
       const data = await response.json();
-      console.log("BytePlus response:", data);
-
-      // Return the response data so it can be used
       return data;
     } catch (error) {
       console.error("BytePlus error:", error);
@@ -71,6 +68,7 @@ export default class BytePlus {
     const decoder = new TextDecoder();
 
     let buffer = "";
+    let result = "";
 
     try {
       while (true) {
@@ -91,7 +89,7 @@ export default class BytePlus {
               const parsed = JSON.parse(data);
               const content = parsed.choices[0].delta.content;
               if (content) {
-                console.log(content);
+                result += content;
               }
             } catch (e) {
               console.error(e);
@@ -102,5 +100,7 @@ export default class BytePlus {
     } finally {
       reader.cancel();
     }
+
+    return result;
   }
 }
