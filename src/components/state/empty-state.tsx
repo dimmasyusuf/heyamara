@@ -1,19 +1,19 @@
-import Image, { StaticImageData } from "next/image";
+import Image, { type StaticImageData } from "next/image";
 
-import Duck from "@/assets/image/duck.png";
+import EmptyImage from "@/assets/image/empty.png";
 
 import { cn } from "@/lib/utils";
 
 interface EmptyStateProps {
-  image?: StaticImageData;
   title: string;
   description?: string;
+  image?: string | StaticImageData;
   children?: React.ReactNode;
   className?: string;
 }
 
 export default function EmptyState({
-  image = Duck,
+  image = EmptyImage,
   title,
   description,
   children,
@@ -22,18 +22,27 @@ export default function EmptyState({
   return (
     <div
       className={cn(
-        "flex flex-col items-center justify-center gap-4",
+        "flex h-full w-full flex-col items-center justify-center gap-2",
         className,
       )}
     >
-      <Image src={image} alt={title} width={208} height={208} />
+      <Image
+        src={image}
+        alt={title}
+        width={291}
+        height={400}
+        className="h-48 w-fit"
+      />
 
-      <div className="flex flex-col items-center gap-6">
-        <div className="flex flex-col gap-1 text-center">
-          <h6 className="text-lg font-bold sm:text-2xl">{title}</h6>
-          <p className="text-sm text-muted-foreground sm:text-base">
-            {description}
-          </p>
+      <div className="flex max-w-96 flex-col items-center gap-4">
+        <div className="flex flex-col items-center">
+          {title && <h6 className="text-center font-semibold">{title}</h6>}
+          {description && (
+            <p
+              className="text-pro-gray-200 text-center text-sm"
+              dangerouslySetInnerHTML={{ __html: description }}
+            />
+          )}
         </div>
 
         {children}

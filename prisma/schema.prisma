@@ -1,0 +1,196 @@
+generator client {
+    provider = "prisma-client-js"
+}
+
+datasource db {
+    provider  = "postgresql"
+    url       = env("DATABASE_URL")
+    directUrl = env("DIRECT_URL")
+}
+
+model User {
+    id            String          @id @default(cuid())
+    name          String?
+    email         String          @unique
+    emailVerified DateTime?
+    image         String?
+    accounts      Account[]
+    sessions      Session[]
+    // Optional for WebAuthn support
+    Authenticator Authenticator[]
+
+    createdAt   DateTime      @default(now())
+    updatedAt   DateTime      @updatedAt
+    ChatSession ChatSession[]
+}
+
+model Account {
+    userId            String
+    type              String
+    provider          String
+    providerAccountId String
+    refresh_token     String?
+    access_token      String?
+    expires_at        Int?
+    token_type        String?
+    scope             String?
+    id_token          String?
+    session_state     String?
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+    @@id([provider, providerAccountId])
+}
+
+model Session {
+    sessionToken String   @unique
+    userId       String
+    expires      DateTime
+    user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+}
+
+model VerificationToken {
+    identifier String
+    token      String
+    expires    DateTime
+
+    @@id([identifier, token])
+}
+
+// Optional for WebAuthn support
+model Authenticator {
+    credentialID         String  @unique
+    userId               String
+    providerAccountId    String
+    credentialPublicKey  String
+    counter              Int
+    credentialDeviceType String
+    credentialBackedUp   Boolean
+    transports           String?
+
+    user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+    @@id([userId, credentialID])
+}
+
+model Candidate {
+    id        String          @id @default(cuid())
+    name      String
+    notes     String?
+    status    CandidateStatus @default(SUBMITTED)
+    rating    Int?
+    createdAt DateTime        @default(now()) @map("created_at")
+    updatedAt DateTime        @updatedAt @map("updated_at")
+    date      DateTime
+    location  String
+    role      String
+    payRate   Int?
+    payType   PayType?
+    resume    Resume?
+}
+
+model Resume {
+    id          String          @id @default(cuid())
+    candidateId String          @unique @map("candidate_id")
+    bucketName  String          @map("bucket_name")
+    fileId      String          @map("file_id")
+    path        String          @map("path")
+    fullPath    String          @map("full_path")
+    fileName    String          @map("file_name")
+    fileSize    Int             @map("file_size")
+    mimeType    String          @map("mime_type")
+    createdAt   DateTime        @default(now()) @map("created_at")
+    updatedAt   DateTime        @updatedAt @map("updated_at")
+    resumeType  ResumeType      @default(DOCUMENT) @map("resume_type")
+    candidate   Candidate       @relation(fields: [candidateId], references: [id], onDelete: Cascade)
+    analysis    ResumeAnalysis?
+}
+
+model ResumeAnalysis {
+    id        String         @id @default(cuid())
+    resumeId  String         @unique @map("resume_id")
+    analysis  String         @map("analysis")
+    status    AnalysisStatus @default(NOT_STARTED) @map("status")
+    progress  Int            @default(0) @map("progress")
+    summary   String?        @map("summary")
+    keywords  String?        @map("keywords")
+    score     Float?         @map("score")
+    createdAt DateTime       @default(now()) @map("created_at")
+    updatedAt DateTime       @updatedAt @map("updated_at")
+    resume    Resume         @relation(fields: [resumeId], references: [id], onDelete: Cascade)
+}
+
+model ChatSession {
+    id          String   @id @default(cuid())
+    userId      String   @map("user_id")
+    title       String
+    description String
+    createdAt   DateTime @default(now()) @map("created_at")
+    updatedAt   DateTime @updatedAt @map("updated_at")
+
+    messages ChatMessage[]
+    user     User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model ChatMessage {
+    id            String          @id @default(cuid())
+    content       String
+    chatSessionId String          @map("chat_session_id")
+    createdAt     DateTime        @default(now()) @map("created_at")
+    updatedAt     DateTime        @updatedAt @map("updated_at")
+    type          ChatMessageType @default(RESUME)
+    role          ChatMessageRole @default(USER)
+    chatSession   ChatSession     @relation(fields: [chatSessionId], references: [id], onDelete: Cascade)
+}
+
+enum ChatMessageRole {
+    USER
+    ASSISTANT
+}
+
+enum ChatMessageType {
+    RESUME
+}
+
+enum CandidateStatus {
+    ACTIVE
+    INTERVIEWING
+    NOT_INTERESTED
+    SUBMITTED
+    FOLLOW_UP
+    INTERESTED
+    LVM
+    PLACED
+    OFFER
+    SCREENING
+}
+
+enum ResumeType {
+    DOCUMENT
+    VIDEO
+}
+
+enum AnalysisStatus {
+    NOT_STARTED
+    UPLOADED
+    QUEUED
+    IN_PROGRESS
+    SUCCEEDED
+    PARTIAL
+    FAILED
+    CANCELLED
+}
+
+enum PayType {
+    HOURLY
+    DAILY
+    WEEKLY
+    MONTHLY
+    YEARLY
+}
